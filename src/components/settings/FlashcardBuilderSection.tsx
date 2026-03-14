@@ -46,7 +46,9 @@ export function FlashcardBuilderSection({
               const frontField = outputFields.find(f => f.id === config.frontFieldId);
               const backFields = config.backFieldIds.map(id => outputFields.find(f => f.id === id)).filter(Boolean) as OutputField[];
               const availableForThis = getAvailableFields();
-              const availableForFront = config.frontFieldId ? availableForThis : [...availableForThis, frontField].filter(Boolean) as OutputField[];
+              const availableForFront = frontField
+                ? [frontField, ...availableForThis.filter(f => f.id !== frontField.id)]
+                : availableForThis;
               const availableForBack = config.backFieldIds.length > 0 ? [...availableForThis, ...backFields] : availableForThis;
 
               return (
