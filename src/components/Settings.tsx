@@ -351,6 +351,36 @@ export function Settings({ settings, onSave }: SettingsProps) {
     }
   };
 
+  const handleFrontFieldChange = async (cardId: string, newFieldId: string) => {
+    const newConfigs = flashcardConfigs.map(c =>
+      c.id === cardId ? { ...c, frontFieldId: newFieldId } : c
+    );
+    setFlashcardConfigs(newConfigs);
+
+    try {
+      await saveFlashcardConfigs(newConfigs);
+      toast.success('Front field updated');
+    } catch (error) {
+      setFlashcardConfigs(flashcardConfigs);
+    }
+  };
+
+  const handleBackFieldAdd = async (cardId: string, newFieldId: string) => {
+    if (!newFieldId) return;
+
+    const newConfigs = flashcardConfigs.map(c =>
+      c.id === cardId ? { ...c, backFieldIds: [...c.backFieldIds, newFieldId] } : c
+    );
+    setFlashcardConfigs(newConfigs);
+
+    try {
+      await saveFlashcardConfigs(newConfigs);
+      toast.success('Back field added');
+    } catch (error) {
+      setFlashcardConfigs(flashcardConfigs);
+    }
+  };
+
   const handleTestConnection = async () => {
     if (!apiKey.trim()) {
       toast.error('API Key is required');
@@ -659,12 +689,7 @@ export function Settings({ settings, onSave }: SettingsProps) {
                         </label>
                         <select
                           value={config.frontFieldId}
-                          onChange={(e) => {
-                            const newFieldId = e.target.value;
-                            setFlashcardConfigs(flashcardConfigs.map(c =>
-                              c.id === config.id ? { ...c, frontFieldId: newFieldId } : c
-                            ));
-                          }}
+                          onChange={(e) => handleFrontFieldChange(config.id, e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">Select a field...</option>
@@ -681,14 +706,7 @@ export function Settings({ settings, onSave }: SettingsProps) {
                         {config.backFieldIds.length < 3 && (
                           <select
                             value=""
-                            onChange={(e) => {
-                              const newFieldId = e.target.value;
-                              if (newFieldId) {
-                                setFlashcardConfigs(flashcardConfigs.map(c =>
-                                  c.id === config.id ? { ...c, backFieldIds: [...c.backFieldIds, newFieldId] } : c
-                                ));
-                              }
-                            }}
+                            onChange={(e) => handleBackFieldAdd(config.id, e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
                           >
                             <option value="">Add a field...</option>
