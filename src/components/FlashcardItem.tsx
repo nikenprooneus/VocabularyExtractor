@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { FlashcardConfig, GeneratedResult, OutputField } from '../types';
 
 interface FlashcardItemProps {
@@ -14,7 +14,7 @@ export function FlashcardItem({ config, results, outputFields }: FlashcardItemPr
   const frontField = outputFields.find(f => f.id === config.frontFieldId);
   const backFields = config.backFieldIds
     .map(id => outputFields.find(f => f.id === id))
-    .filter(Boolean);
+    .filter((f): f is OutputField => !!f);
 
   if (!frontField || !results[frontField.name]) {
     return null;

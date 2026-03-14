@@ -18,8 +18,8 @@ export default function Login() {
     try {
       await signIn(email, password);
       navigate('/');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to sign in');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to sign in');
     } finally {
       setIsLoading(false);
     }

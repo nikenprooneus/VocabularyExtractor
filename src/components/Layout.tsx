@@ -1,8 +1,9 @@
-import { ReactNode, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { ReactNode, useState, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Settings, Zap, Shield, User } from 'lucide-react';
+import { LogOut, Zap, Shield, User } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { NavLinks } from './NavLinks';
 
 interface LayoutProps {
   children: ReactNode;
@@ -21,14 +22,19 @@ export default function Layout({ children }: LayoutProps) {
     try {
       await signOut();
       navigate('/login');
-    } catch (error) {
+    } catch {
       toast.error('Failed to sign out');
     } finally {
       setIsLoggingOut(false);
     }
   };
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = useCallback(
+    (path: string) => location.pathname === path,
+    [location.pathname]
+  );
+
+  const isAdmin = user?.role === 'admin';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -46,40 +52,7 @@ export default function Layout({ children }: LayoutProps) {
               </div>
 
               <nav className="hidden md:flex items-center gap-1">
-                <Link
-                  to="/"
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    isActive('/')
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  Generator
-                </Link>
-                <Link
-                  to="/settings"
-                  className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
-                    isActive('/settings')
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  <Settings size={16} />
-                  Settings
-                </Link>
-                {user?.role === 'admin' && (
-                  <Link
-                    to="/admin"
-                    className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
-                      isActive('/admin')
-                        ? 'bg-amber-100 text-amber-700'
-                        : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Shield size={16} />
-                    Admin
-                  </Link>
-                )}
+                <NavLinks isActive={isActive} isAdmin={!!isAdmin} />
               </nav>
             </div>
 
@@ -89,7 +62,7 @@ export default function Layout({ children }: LayoutProps) {
                 <div className="text-sm">
                   <p className="font-medium text-slate-800">{user?.email}</p>
                   <p className="text-xs text-slate-600">
-                    {user?.role === 'admin' ? (
+                    {isAdmin ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-semibold">
                         <Shield size={12} />
                         Admin
@@ -113,40 +86,7 @@ export default function Layout({ children }: LayoutProps) {
           </div>
 
           <nav className="md:hidden flex items-center gap-2 pb-4 overflow-x-auto">
-            <Link
-              to="/"
-              className={`px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
-                isActive('/')
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              Generator
-            </Link>
-            <Link
-              to="/settings"
-              className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
-                isActive('/settings')
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <Settings size={16} />
-              Settings
-            </Link>
-            {user?.role === 'admin' && (
-              <Link
-                to="/admin"
-                className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
-                  isActive('/admin')
-                    ? 'bg-amber-100 text-amber-700'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                <Shield size={16} />
-                Admin
-              </Link>
-            )}
+            <NavLinks isActive={isActive} isAdmin={!!isAdmin} mobile />
           </nav>
         </div>
       </header>

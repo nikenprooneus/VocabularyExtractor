@@ -17,8 +17,7 @@ export default function AdminDashboard() {
       setIsLoading(true);
       const data = await fetchAllProfiles();
       setProfiles(data);
-    } catch (error) {
-      console.error('Error loading profiles:', error);
+    } catch {
       toast.error('Failed to load user profiles');
     } finally {
       setIsLoading(false);
@@ -45,8 +44,7 @@ export default function AdminDashboard() {
         p.id === userId ? { ...p, role: newRole, updated_at: new Date().toISOString() } : p
       ));
       toast.success(`User role updated to ${newRole}`);
-    } catch (error) {
-      console.error('Error updating role:', error);
+    } catch {
       toast.error('Failed to update user role');
     } finally {
       setUpdatingUserId(null);

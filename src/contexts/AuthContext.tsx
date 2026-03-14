@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { AuthContextType, UserProfile } from '../types';
 import toast from 'react-hot-toast';
@@ -15,7 +16,7 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchUserProfile = async (userId: string) => {
@@ -28,8 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) throw error;
       return data;
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
+    } catch {
       return null;
     }
   };

@@ -63,8 +63,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           flashcardConfigs,
         });
       }
-    } catch (error) {
-      console.error('Failed to load settings:', error);
+    } catch {
+      // Errors are handled by the caller via toast
     } finally {
       setIsLoading(false);
     }
@@ -91,10 +91,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
       setSettings(newSettings);
       toast.success('Settings saved successfully');
-    } catch (error) {
-      console.error('Failed to save settings:', error);
+    } catch {
       toast.error('Failed to save settings');
-      throw error;
+      throw new Error('Failed to save settings');
     }
   };
 

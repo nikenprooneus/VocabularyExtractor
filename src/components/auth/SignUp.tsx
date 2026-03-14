@@ -30,8 +30,8 @@ export default function SignUp() {
     try {
       await signUp(email, password);
       navigate('/login');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create account');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create account');
     } finally {
       setIsLoading(false);
     }

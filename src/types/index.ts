@@ -1,3 +1,5 @@
+import type { Session } from '@supabase/supabase-js';
+
 export interface OutputField {
   id: string;
   name: string;
@@ -21,7 +23,7 @@ export interface Settings {
 }
 
 export interface GeneratedResult {
-  [key: string]: string;
+  [key: string]: string | undefined;
   rawOutput?: string;
 }
 
@@ -53,7 +55,7 @@ export interface DatabaseSettings {
   model: string;
   prompt_template: string;
   webhook_url: string;
-  flashcard_configs: any;
+  flashcard_configs: FlashcardConfig[];
   created_at: string;
   updated_at: string;
 }
@@ -77,7 +79,7 @@ export interface VocabularyEntry {
 
 export interface AuthContextType {
   user: UserProfile | null;
-  session: any;
+  session: Session | null;
   loading: boolean;
   signUp: (email: string, password: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;

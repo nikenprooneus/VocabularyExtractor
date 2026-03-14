@@ -24,8 +24,7 @@ export async function testConnection(config: APIConfig): Promise<boolean> {
     }
 
     return response.ok;
-  } catch (error) {
-    console.error('Connection test error:', error);
+  } catch {
     return false;
   }
 }
