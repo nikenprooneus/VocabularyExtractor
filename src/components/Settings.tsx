@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { Loader } from 'lucide-react';
 import { Settings as SettingsType, OutputField, FlashcardConfig } from '../types/index';
 import { testConnection } from '../services/apiService';
-import { fetchUserSettings, upsertUserSettings, fetchOutputFields, saveOutputFields } from '../services/supabaseService';
+import { upsertUserSettings, saveOutputFields } from '../services/supabaseService';
 import { useAuth } from '../contexts/AuthContext';
+import { useSettings } from '../contexts/SettingsContext';
 import toast from 'react-hot-toast';
 import { arrayMove } from '@dnd-kit/sortable';
 import { DragEndEvent } from '@dnd-kit/core';
@@ -20,6 +21,7 @@ interface SettingsProps {
 
 export function Settings({ settings, onSave }: SettingsProps) {
   const { user } = useAuth();
+  const { syncFlashcardConfigs } = useSettings();
   const [apiKey, setApiKey] = useState(settings.apiKey);
   const [baseUrl, setBaseUrl] = useState(settings.baseUrl);
   const [model, setModel] = useState(settings.model);
@@ -61,44 +63,15 @@ export function Settings({ settings, onSave }: SettingsProps) {
   };
 
   useEffect(() => {
-    const loadSettings = async () => {
-      if (!user) return;
-
-      try {
-        setIsLoading(true);
-        const [dbSettings, dbFields] = await Promise.all([
-          fetchUserSettings(user.id),
-          fetchOutputFields(user.id)
-        ]);
-
-        if (dbSettings) {
-          setApiKey(dbSettings.api_key);
-          setBaseUrl(dbSettings.base_url);
-          setModel(dbSettings.model);
-          setPromptTemplate(dbSettings.prompt_template);
-          setWebhookUrl(dbSettings.webhook_url || '');
-
-          const flashcardConfigsData = dbSettings.flashcard_configs || [];
-          setFlashcardConfigs(Array.isArray(flashcardConfigsData) ? flashcardConfigsData : []);
-        }
-
-        if (dbFields.length > 0) {
-          const sortedFields = [...dbFields].sort((a, b) => a.display_order - b.display_order);
-          const fields: OutputField[] = sortedFields.map(field => ({
-            id: field.id,
-            name: field.name
-          }));
-          setOutputFields(fields);
-        }
-      } catch {
-        toast.error('Failed to load settings');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadSettings();
-  }, [user]);
+    setApiKey(settings.apiKey);
+    setBaseUrl(settings.baseUrl);
+    setModel(settings.model);
+    setPromptTemplate(settings.promptTemplate);
+    setWebhookUrl(settings.webhookUrl || '');
+    setOutputFields(settings.outputFields);
+    setFlashcardConfigs(settings.flashcardConfigs || []);
+    setIsLoading(false);
+  }, [settings]);
 
   const handleAddField = () => {
     if (!newFieldName.trim()) {
@@ -151,15 +124,7 @@ export function Settings({ settings, onSave }: SettingsProps) {
         flashcard_configs: configs,
       });
 
-      onSave({
-        apiKey,
-        baseUrl,
-        model,
-        outputFields,
-        promptTemplate,
-        webhookUrl,
-        flashcardConfigs: configs,
-      });
+      syncFlashcardConfigs(configs);
     } catch {
       toast.error('Failed to save flashcard configuration');
       throw new Error('Failed to save flashcard configuration');

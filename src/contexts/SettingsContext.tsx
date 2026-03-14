@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Settings, OutputField } from '../types/index';
+import { Settings, OutputField, FlashcardConfig } from '../types/index';
 import { useAuth } from './AuthContext';
 import { fetchUserSettings, upsertUserSettings, fetchOutputFields, saveOutputFields } from '../services/supabaseService';
 import toast from 'react-hot-toast';
@@ -17,6 +17,7 @@ const DEFAULT_SETTINGS: Settings = {
 interface SettingsContextType {
   settings: Settings;
   updateSettings: (newSettings: Settings) => Promise<void>;
+  syncFlashcardConfigs: (configs: FlashcardConfig[]) => void;
   isLoading: boolean;
 }
 
@@ -97,8 +98,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const syncFlashcardConfigs = (configs: FlashcardConfig[]) => {
+    setSettings((prev) => ({ ...prev, flashcardConfigs: configs }));
+  };
+
   return (
-    <SettingsContext.Provider value={{ settings, updateSettings, isLoading }}>
+    <SettingsContext.Provider value={{ settings, updateSettings, syncFlashcardConfigs, isLoading }}>
       {children}
     </SettingsContext.Provider>
   );
