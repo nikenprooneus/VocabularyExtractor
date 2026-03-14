@@ -1,0 +1,8 @@
+import { Generator } from '../components/Generator';
+import { useSettings } from '../contexts/SettingsContext';
+
+export default function GeneratorPage() {
+  const { settings } = useSettings();
+
+  return <Generator settings={settings} />;
+}

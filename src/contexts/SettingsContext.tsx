@@ -1,0 +1,114 @@
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Settings, OutputField } from '../types/index';
+import { useAuth } from './AuthContext';
+import { fetchUserSettings, upsertUserSettings, fetchOutputFields, saveOutputFields } from '../services/supabaseService';
+import toast from 'react-hot-toast';
+
+const DEFAULT_SETTINGS: Settings = {
+  apiKey: '',
+  baseUrl: 'https://api.openai.com/v1',
+  model: 'gpt-3.5-turbo',
+  outputFields: [],
+  promptTemplate: 'Define the word "{{Word}}" in detail, including pronunciation, parts of speech, meanings, and usage notes.',
+  webhookUrl: '',
+  flashcardConfigs: [],
+};
+
+interface SettingsContextType {
+  settings: Settings;
+  updateSettings: (newSettings: Settings) => Promise<void>;
+  isLoading: boolean;
+}
+
+const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
+
+export function SettingsProvider({ children }: { children: ReactNode }) {
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      loadSettings();
+    }
+  }, [user]);
+
+  const loadSettings = async () => {
+    if (!user?.id) return;
+
+    try {
+      setIsLoading(true);
+      const [dbSettings, dbOutputFields] = await Promise.all([
+        fetchUserSettings(user.id),
+        fetchOutputFields(user.id),
+      ]);
+
+      if (dbSettings) {
+        const sortedFields = [...dbOutputFields].sort((a, b) => a.display_order - b.display_order);
+        const outputFields: OutputField[] = sortedFields.map((field) => ({
+          id: field.id,
+          name: field.name,
+        }));
+
+        const flashcardConfigsData = dbSettings.flashcard_configs || [];
+        const flashcardConfigs = Array.isArray(flashcardConfigsData) ? flashcardConfigsData : [];
+
+        setSettings({
+          apiKey: dbSettings.api_key,
+          baseUrl: dbSettings.base_url,
+          model: dbSettings.model,
+          outputFields,
+          promptTemplate: dbSettings.prompt_template,
+          webhookUrl: dbSettings.webhook_url,
+          flashcardConfigs,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateSettings = async (newSettings: Settings) => {
+    if (!user?.id) return;
+
+    try {
+      await upsertUserSettings(user.id, {
+        api_key: newSettings.apiKey,
+        base_url: newSettings.baseUrl,
+        model: newSettings.model,
+        prompt_template: newSettings.promptTemplate,
+        webhook_url: newSettings.webhookUrl,
+        flashcard_configs: newSettings.flashcardConfigs || [],
+      });
+
+      const outputFieldsToSave = newSettings.outputFields.map((field, index) => ({
+        name: field.name,
+        display_order: index,
+      }));
+      await saveOutputFields(user.id, outputFieldsToSave);
+
+      setSettings(newSettings);
+      toast.success('Settings saved successfully');
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      toast.error('Failed to save settings');
+      throw error;
+    }
+  };
+
+  return (
+    <SettingsContext.Provider value={{ settings, updateSettings, isLoading }}>
+      {children}
+    </SettingsContext.Provider>
+  );
+}
+
+export function useSettings() {
+  const context = useContext(SettingsContext);
+  if (context === undefined) {
+    throw new Error('useSettings must be used within a SettingsProvider');
+  }
+  return context;
+}
