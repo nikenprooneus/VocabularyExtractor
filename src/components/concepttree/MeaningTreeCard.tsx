@@ -31,11 +31,11 @@ function buildNodes(meaning: ParsedMeaning, existingConceptNames: Set<string>): 
 }
 
 export function MeaningTreeCard({ meaning, word, meaningIndex, totalMeanings }: MeaningTreeCardProps) {
-  const { concepts, saveConceptsFromMeaning } = useConceptContext();
+  const { concepts, conceptWords, saveConceptsFromMeaning } = useConceptContext();
   const [isSaving, setIsSaving] = useState(false);
 
   const existingConceptNames = new Set(
-    concepts.filter((c) => c.nodeType === 'concept').map((c) => c.name.toLowerCase().trim())
+    concepts.map((c) => c.name.toLowerCase().trim())
   );
   const nodes = buildNodes(meaning, existingConceptNames);
 
@@ -44,13 +44,12 @@ export function MeaningTreeCard({ meaning, word, meaningIndex, totalMeanings }: 
 
   const lastTierName = nodes[nodes.length - 1]?.name.toLowerCase().trim() ?? null;
   const wordParentConcept = lastTierName
-    ? concepts.find((c) => c.nodeType === 'concept' && c.name.toLowerCase().trim() === lastTierName)
+    ? concepts.find((c) => c.name.toLowerCase().trim() === lastTierName)
     : null;
-  const wordAlreadyExists = concepts.some(
-    (c) =>
-      c.nodeType === 'word' &&
-      c.name.toLowerCase().trim() === word.toLowerCase().trim() &&
-      c.parentId === (wordParentConcept?.id ?? null)
+  const wordAlreadyExists = conceptWords.some(
+    (w) =>
+      w.word.toLowerCase().trim() === word.toLowerCase().trim() &&
+      w.conceptId === (wordParentConcept?.id ?? null)
   );
 
   const newNodes = nodes.filter((n) => n.status === 'NEW');

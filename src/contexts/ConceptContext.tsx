@@ -1,50 +1,71 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { ConceptWord, WordLink, ConceptContextType, ConceptTreeNode } from '../types';
+import { Concept, ConceptConcept, ConceptWord, WordLink, ConceptContextType, ConceptTreeNode } from '../types';
 import {
-  fetchUserConcepts,
+  fetchAllUserData,
   fetchWordLinks,
-  findConceptByNameAndType,
-  insertConcept,
-  updateConceptParent,
+  findConceptByName,
+  findWordNode,
+  insertConceptNode,
+  upsertConceptRelationship,
+  insertWordNode,
 } from '../services/conceptService';
 import { useAuth } from './AuthContext';
 import toast from 'react-hot-toast';
 
 const ConceptContext = createContext<ConceptContextType | null>(null);
 
-function buildConceptBank(concepts: ConceptWord[]): string {
-  if (concepts.length === 0) return '';
+function buildConceptBank(
+  concepts: Concept[],
+  conceptConcepts: ConceptConcept[],
+  conceptWords: ConceptWord[]
+): string {
+  if (concepts.length === 0 && conceptWords.length === 0) return '';
 
-  const byId = new Map<string, ConceptWord>(concepts.map((c) => [c.id, c]));
+  const conceptById = new Map<string, Concept>(concepts.map((c) => [c.id, c]));
+  const childToParent = new Map<string, string>(
+    conceptConcepts.map((e) => [e.childId, e.parentId])
+  );
 
-  const getAncestry = (concept: ConceptWord): string => {
+  const getConceptAncestry = (conceptId: string): string => {
     const path: string[] = [];
-    let current: ConceptWord | undefined = concept;
-
-    while (current) {
-      if (current.nodeType === 'word' && current.wordLinkName) {
-        path.unshift(`[${current.wordLinkName}] ${current.name}`);
-      } else {
-        path.unshift(current.name);
-      }
-      current = current.parentId ? byId.get(current.parentId) : undefined;
+    let currentId: string | undefined = conceptId;
+    while (currentId) {
+      const concept = conceptById.get(currentId);
+      if (!concept) break;
+      path.unshift(concept.name);
+      currentId = childToParent.get(currentId);
     }
-
     return path.join(' > ');
   };
 
-  return concepts.map(getAncestry).join('\n');
+  const lines: string[] = [];
+
+  for (const w of conceptWords) {
+    const wordPart = w.wordLinkName ? `[${w.wordLinkName}] ${w.word}` : w.word;
+    if (w.conceptId) {
+      const ancestry = getConceptAncestry(w.conceptId);
+      lines.push(ancestry ? `${ancestry} > ${wordPart}` : wordPart);
+    } else {
+      lines.push(wordPart);
+    }
+  }
+
+  return lines.join('\n');
 }
 
 export function ConceptProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [concepts, setConcepts] = useState<ConceptWord[]>([]);
+  const [concepts, setConcepts] = useState<Concept[]>([]);
+  const [conceptConcepts, setConceptConcepts] = useState<ConceptConcept[]>([]);
+  const [conceptWords, setConceptWords] = useState<ConceptWord[]>([]);
   const [wordLinks, setWordLinks] = useState<WordLink[]>([]);
 
   const refreshConcepts = useCallback(async () => {
     if (!user) return;
-    const data = await fetchUserConcepts(user.id);
-    setConcepts(data);
+    const data = await fetchAllUserData(user.id);
+    setConcepts(data.concepts);
+    setConceptConcepts(data.conceptConcepts);
+    setConceptWords(data.conceptWords);
   }, [user]);
 
   useEffect(() => {
@@ -55,6 +76,8 @@ export function ConceptProvider({ children }: { children: ReactNode }) {
         .catch(() => {});
     } else {
       setConcepts([]);
+      setConceptConcepts([]);
+      setConceptWords([]);
       setWordLinks([]);
     }
   }, [user, refreshConcepts]);
@@ -92,14 +115,14 @@ export function ConceptProvider({ children }: { children: ReactNode }) {
         const parentNorm = parentNode ? normalizeStr(parentNode.name) : null;
         const resolvedParentId = parentNorm ? (resolvedIds.get(parentNorm) ?? null) : null;
 
-        const existing = await findConceptByNameAndType(user.id, normalizedName, 'concept');
+        const existing = await findConceptByName(user.id, normalizedName);
 
         if (existing) {
           resolvedIds.set(normalizedName, existing.id);
           existingCount++;
 
-          if (existing.parentId === null && resolvedParentId) {
-            await updateConceptParent(existing.id, resolvedParentId);
+          if (resolvedParentId) {
+            await upsertConceptRelationship(user.id, resolvedParentId, existing.id);
           }
           continue;
         }
@@ -107,11 +130,15 @@ export function ConceptProvider({ children }: { children: ReactNode }) {
         if (!isSelected) continue;
 
         try {
-          const created = await insertConcept(user.id, normalizedName, resolvedParentId, 'concept');
+          const created = await insertConceptNode(user.id, normalizedName);
           resolvedIds.set(normalizedName, created.id);
           savedCount++;
+
+          if (resolvedParentId) {
+            await upsertConceptRelationship(user.id, resolvedParentId, created.id);
+          }
         } catch {
-          const found = await findConceptByNameAndType(user.id, normalizedName, 'concept');
+          const found = await findConceptByName(user.id, normalizedName);
           if (found) {
             resolvedIds.set(normalizedName, found.id);
           }
@@ -120,18 +147,18 @@ export function ConceptProvider({ children }: { children: ReactNode }) {
 
       const lastConceptNode = nodes[nodes.length - 1];
       const wordParentNorm = lastConceptNode ? normalizeStr(lastConceptNode.name) : null;
-      const wordParentId = wordParentNorm ? (resolvedIds.get(wordParentNorm) ?? null) : null;
+      const wordConceptId = wordParentNorm ? (resolvedIds.get(wordParentNorm) ?? null) : null;
       const normalizedWord = normalizeStr(wordName);
       const wordLinkId = resolveWordLinkId(conceptLink);
 
-      const existingWord = await findConceptByNameAndType(user.id, normalizedWord, 'word', wordParentId);
+      const existingWord = await findWordNode(user.id, normalizedWord, wordConceptId);
 
       if (!existingWord) {
         try {
-          await insertConcept(user.id, normalizedWord, wordParentId, 'word', wordLinkId, contextDefinition ?? null);
+          await insertWordNode(user.id, normalizedWord, wordConceptId, wordLinkId, contextDefinition ?? null);
           savedCount++;
         } catch {
-          const found = await findConceptByNameAndType(user.id, normalizedWord, 'word', wordParentId);
+          const found = await findWordNode(user.id, normalizedWord, wordConceptId);
           if (!found) {
             console.error('Failed to insert word node for', normalizedWord);
           }
@@ -154,10 +181,12 @@ export function ConceptProvider({ children }: { children: ReactNode }) {
     [user, refreshConcepts, resolveWordLinkId]
   );
 
-  const conceptBank = buildConceptBank(concepts);
+  const conceptBank = buildConceptBank(concepts, conceptConcepts, conceptWords);
 
   return (
-    <ConceptContext.Provider value={{ concepts, wordLinks, conceptBank, refreshConcepts, saveConceptsFromMeaning }}>
+    <ConceptContext.Provider
+      value={{ concepts, conceptConcepts, conceptWords, wordLinks, conceptBank, refreshConcepts, saveConceptsFromMeaning }}
+    >
       {children}
     </ConceptContext.Provider>
   );

@@ -95,12 +95,25 @@ export interface WordLink {
   name: string;
 }
 
-export interface ConceptWord {
+export interface Concept {
   id: string;
   userId: string;
   name: string;
-  parentId: string | null;
-  nodeType: 'concept' | 'word';
+  createdAt: string;
+}
+
+export interface ConceptConcept {
+  id: string;
+  userId: string;
+  parentId: string;
+  childId: string;
+}
+
+export interface ConceptWord {
+  id: string;
+  userId: string;
+  word: string;
+  conceptId: string | null;
   wordLinkId?: string | null;
   wordLinkName?: string;
   contextDefinition?: string | null;
@@ -121,7 +134,9 @@ export interface ConceptTreeNode {
 }
 
 export interface ConceptContextType {
-  concepts: ConceptWord[];
+  concepts: Concept[];
+  conceptConcepts: ConceptConcept[];
+  conceptWords: ConceptWord[];
   wordLinks: WordLink[];
   conceptBank: string;
   refreshConcepts: () => Promise<void>;
