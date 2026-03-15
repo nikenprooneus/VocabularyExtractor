@@ -96,28 +96,61 @@ export const fetchOutputFields = async (userId: string): Promise<OutputFieldDB[]
 
 export const saveOutputFields = async (
   userId: string,
-  fields: { name: string; display_order: number }[]
-): Promise<void> => {
-  const { error: deleteError } = await supabase
-    .from('output_fields')
-    .delete()
-    .eq('user_id', userId);
+  fields: { id?: string; name: string; display_order: number }[]
+): Promise<OutputFieldDB[]> => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const existingFieldIds = fields
+    .filter((f) => f.id && uuidRegex.test(f.id))
+    .map((f) => f.id as string);
 
-  if (deleteError) throw deleteError;
+  const currentFields = await fetchOutputFields(userId);
+  const currentIds = currentFields.map((f) => f.id);
+  const idsToDelete = currentIds.filter((id) => !existingFieldIds.includes(id));
 
-  if (fields.length > 0) {
-    const fieldsToInsert = fields.map((field) => ({
+  if (idsToDelete.length > 0) {
+    const { error: deleteError } = await supabase
+      .from('output_fields')
+      .delete()
+      .in('id', idsToDelete);
+    if (deleteError) throw deleteError;
+  }
+
+  if (fields.length === 0) return [];
+
+  const fieldsToUpsert = fields.map((field) => {
+    const isExistingUuid = field.id && uuidRegex.test(field.id);
+    return {
+      ...(isExistingUuid ? { id: field.id } : {}),
       user_id: userId,
       name: field.name,
       display_order: field.display_order,
-    }));
+    };
+  });
 
-    const { error: insertError } = await supabase
+  const existingToUpsert = fieldsToUpsert.filter((f) => f.id);
+  const newToInsert = fieldsToUpsert.filter((f) => !f.id);
+
+  const results: OutputFieldDB[] = [];
+
+  if (existingToUpsert.length > 0) {
+    const { data, error } = await supabase
       .from('output_fields')
-      .insert(fieldsToInsert);
-
-    if (insertError) throw insertError;
+      .upsert(existingToUpsert, { onConflict: 'id' })
+      .select();
+    if (error) throw error;
+    results.push(...(data || []));
   }
+
+  if (newToInsert.length > 0) {
+    const { data, error } = await supabase
+      .from('output_fields')
+      .insert(newToInsert)
+      .select();
+    if (error) throw error;
+    results.push(...(data || []));
+  }
+
+  return results;
 };
 
 export const saveVocabularyEntry = async (

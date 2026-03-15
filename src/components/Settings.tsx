@@ -82,7 +82,7 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
       return;
     }
     const newField: OutputField = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       name: newFieldName.trim(),
     };
     setOutputFields([...outputFields, newField]);
@@ -268,6 +268,7 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
       await saveOutputFields(
         user.id,
         outputFields.map((field, index) => ({
+          id: field.id,
           name: field.name,
           display_order: index,
         }))
