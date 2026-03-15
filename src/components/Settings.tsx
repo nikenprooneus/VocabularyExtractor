@@ -119,6 +119,11 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
   };
 
   const handleRemoveCtField = (id: string) => {
+    const field = conceptTreeOutputFields.find((f) => f.id === id);
+    if (field && field.name === 'ConceptLink') {
+      toast.error('ConceptLink field is mandatory and cannot be deleted');
+      return;
+    }
     setConceptTreeOutputFields(conceptTreeOutputFields.filter((f) => f.id !== id));
   };
 
@@ -334,7 +339,7 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
           <>
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
               <p className="text-sm text-slate-700">
-                <span className="font-semibold">Concept Tree Configuration</span> — These settings drive the Concept Tree analysis exclusively. Add fields like <code className="bg-white border border-slate-200 px-1 rounded text-xs">Tier1</code>, <code className="bg-white border border-slate-200 px-1 rounded text-xs">Tier2</code>, <code className="bg-white border border-slate-200 px-1 rounded text-xs">Tier3</code> and write a dedicated prompt. When you click Generate, this runs as a separate parallel API call — keeping your TMRND prompt lean and focused.
+                <span className="font-semibold">Concept Tree Configuration</span> — These settings drive the Concept Tree analysis exclusively. Add fields like <code className="bg-white border border-slate-200 px-1 rounded text-xs">Tier1</code>, <code className="bg-white border border-slate-200 px-1 rounded text-xs">Tier2</code>, <code className="bg-white border border-slate-200 px-1 rounded text-xs">Tier3</code>, and write a dedicated prompt. <code className="bg-white border border-slate-200 px-1 rounded text-xs">ConceptLink</code> is a mandatory field that labels the semantic relationship between Tier 3 and the word — it cannot be deleted. When you click Generate, this runs as a separate parallel API call — keeping your TMRND prompt lean and focused.
               </p>
             </div>
 
@@ -345,6 +350,7 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
               onAddField={handleAddCtField}
               onRemoveField={handleRemoveCtField}
               onDragEnd={handleCtDragEnd}
+              protectedFieldNames={['ConceptLink']}
             />
 
             <PromptTemplateSection

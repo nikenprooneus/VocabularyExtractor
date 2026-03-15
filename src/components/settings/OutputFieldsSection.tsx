@@ -22,10 +22,10 @@ import { CSS } from '@dnd-kit/utilities';
 interface SortableFieldItemProps {
   field: OutputField;
   onRemove: (id: string) => void;
-  isDefinitionField?: boolean;
+  isProtectedField?: boolean;
 }
 
-function SortableFieldItem({ field, onRemove, isDefinitionField = false }: SortableFieldItemProps) {
+function SortableFieldItem({ field, onRemove, isProtectedField = false }: SortableFieldItemProps) {
   const {
     attributes,
     listeners,
@@ -66,7 +66,7 @@ function SortableFieldItem({ field, onRemove, isDefinitionField = false }: Sorta
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <span className="text-gray-800 font-medium block">{field.name}</span>
-            {isDefinitionField && (
+            {isProtectedField && (
               <>
                 <Lock size={14} className="text-gray-400" />
                 <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-medium">Required</span>
@@ -87,7 +87,7 @@ function SortableFieldItem({ field, onRemove, isDefinitionField = false }: Sorta
             </button>
           </div>
         </div>
-        {!isDefinitionField && (
+        {!isProtectedField && (
           <button
             onClick={() => onRemove(field.id)}
             className="text-red-600 hover:text-red-800 transition-colors"
@@ -108,6 +108,7 @@ interface OutputFieldsSectionProps {
   onAddField: () => void;
   onRemoveField: (id: string) => void;
   onDragEnd: (event: DragEndEvent) => void;
+  protectedFieldNames?: string[];
 }
 
 export function OutputFieldsSection({
@@ -117,6 +118,7 @@ export function OutputFieldsSection({
   onAddField,
   onRemoveField,
   onDragEnd,
+  protectedFieldNames,
 }: OutputFieldsSectionProps) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -124,6 +126,8 @@ export function OutputFieldsSection({
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  const protected_ = new Set(protectedFieldNames ?? ['Definition']);
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
@@ -165,7 +169,7 @@ export function OutputFieldsSection({
                       key={field.id}
                       field={field}
                       onRemove={onRemoveField}
-                      isDefinitionField={field.name === 'Definition'}
+                      isProtectedField={protected_.has(field.name)}
                     />
                   ))}
                 </div>
@@ -177,7 +181,7 @@ export function OutputFieldsSection({
           <p className="font-medium mb-1">Use Marker Tags in your prompt:</p>
           <p className="mb-2">Each field has a marker tag displayed below its name. Copy these tags and use them in your prompt template to extract specific values from the AI's response.</p>
           <p className="font-medium mb-1">Concept Tree fields:</p>
-          <p>Add fields named <code className="bg-white px-1 rounded font-mono">Tier1</code>, <code className="bg-white px-1 rounded font-mono">Tier2</code>, <code className="bg-white px-1 rounded font-mono">Tier3</code>, and <code className="bg-white px-1 rounded font-mono">Context Definition</code> to enable the Concept Tree visualization. For polysemic words, use numbered tags in your prompt (e.g. <code className="bg-white px-1 rounded font-mono">&Tier1 1&{"{}"}</code>, <code className="bg-white px-1 rounded font-mono">&Tier1 2&{"{}"}</code>) alongside <code className="bg-white px-1 rounded font-mono">&No of Definition&{"{}"}</code>.</p>
+          <p>Add fields named <code className="bg-white px-1 rounded font-mono">Tier1</code>, <code className="bg-white px-1 rounded font-mono">Tier2</code>, <code className="bg-white px-1 rounded font-mono">Tier3</code>, and <code className="bg-white px-1 rounded font-mono">Context Definition</code> to enable the Concept Tree visualization. <code className="bg-white px-1 rounded font-mono">ConceptLink</code> is a required field that labels the relationship between Tier 3 and the word. For polysemic words, use numbered tags in your prompt (e.g. <code className="bg-white px-1 rounded font-mono">&Tier1 1&{"{}"}</code>, <code className="bg-white px-1 rounded font-mono">&Tier1 2&{"{}"}</code>) alongside <code className="bg-white px-1 rounded font-mono">&No of Definition&{"{}"}</code>.</p>
         </div>
       </div>
     </div>

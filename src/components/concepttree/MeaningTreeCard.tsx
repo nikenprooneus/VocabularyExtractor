@@ -64,6 +64,7 @@ export function MeaningTreeCard({ meaning, word, meaningIndex, totalMeanings }: 
   };
 
   const contextDefinition = meaning['Context Definition'] || meaning['Definition'] || '';
+  const conceptLink = meaning['ConceptLink']?.trim() || '';
   const hasAnyNodes = nodes.length > 0;
   const hasNewSelected = newNodes.some((n) => selectedNames.has(n.name));
 
@@ -100,7 +101,13 @@ export function MeaningTreeCard({ meaning, word, meaningIndex, totalMeanings }: 
               <span className="text-gray-300 text-sm font-light select-none">›</span>
               {idx === nodes.length - 1 && (
                 <>
-                  <span className="text-xs text-gray-400 font-mono px-1 select-none">···</span>
+                  {conceptLink ? (
+                    <span className="text-xs italic text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full select-none">
+                      {conceptLink}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-400 font-mono px-1 select-none">···</span>
+                  )}
                   <span className="text-gray-300 text-sm font-light select-none">›</span>
                   <ConceptNode
                     name={word}
