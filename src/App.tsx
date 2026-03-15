@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import { SettingsProvider } from './contexts/SettingsContext';
+import { ConceptProvider } from './contexts/ConceptContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Login from './components/auth/Login';
 import SignUp from './components/auth/SignUp';
@@ -15,6 +16,7 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <SettingsProvider>
+          <ConceptProvider>
           <Toaster position="top-right" />
           <Routes>
             <Route path="/login" element={<Login />} />
@@ -43,6 +45,7 @@ function App() {
               }
             />
           </Routes>
+          </ConceptProvider>
         </SettingsProvider>
       </AuthProvider>
     </BrowserRouter>

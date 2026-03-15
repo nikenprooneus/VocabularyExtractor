@@ -1,6 +1,7 @@
 import { Copy, ChevronDown, ChevronUp } from 'lucide-react';
-import { Settings as SettingsType, GeneratedResult } from '../../types/index';
+import { Settings as SettingsType, GeneratedResult, ParsedMeaning } from '../../types/index';
 import { FlashcardItem } from '../FlashcardItem';
+import { ConceptTreesSection } from '../concepttree/ConceptTreesSection';
 
 interface ResultsDisplayProps {
   results: GeneratedResult;
@@ -8,6 +9,8 @@ interface ResultsDisplayProps {
   showRawOutput: boolean;
   onToggleRawOutput: () => void;
   onCopyRawOutput: () => void;
+  parsedMeanings?: ParsedMeaning[] | null;
+  word?: string;
 }
 
 export function ResultsDisplay({
@@ -16,6 +19,8 @@ export function ResultsDisplay({
   showRawOutput,
   onToggleRawOutput,
   onCopyRawOutput,
+  parsedMeanings,
+  word,
 }: ResultsDisplayProps) {
   return (
     <>
@@ -66,6 +71,10 @@ export function ResultsDisplay({
               ))}
           </div>
         </div>
+      )}
+
+      {parsedMeanings && parsedMeanings.length > 0 && word && (
+        <ConceptTreesSection parsedMeanings={parsedMeanings} word={word} />
       )}
 
       {results.rawOutput && (

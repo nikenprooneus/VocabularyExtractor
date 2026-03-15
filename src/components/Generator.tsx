@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Settings as SettingsType, GeneratedResult } from '../types/index';
+import { Settings as SettingsType, GeneratedResult, ParsedMeaning } from '../types/index';
 import { generateVocabulary } from '../services/apiService';
 import { exportToWebhook } from '../services/exportService';
 import { saveVocabularyEntry } from '../services/supabaseService';
 import { useAuth } from '../contexts/AuthContext';
+import { useConceptContext } from '../contexts/ConceptContext';
+import { parsePolysemicMarkerTags } from '../utils/parsingUtils';
 import toast from 'react-hot-toast';
 import { WordInputSection } from './generator/WordInputSection';
 import { ResultsDisplay } from './generator/ResultsDisplay';
@@ -16,9 +18,11 @@ interface GeneratorProps {
 
 export function Generator({ settings, isLoading: settingsLoading = false }: GeneratorProps) {
   const { user } = useAuth();
+  const { conceptBank } = useConceptContext();
   const [word, setWord] = useState('');
   const [example, setExample] = useState('');
   const [results, setResults] = useState<GeneratedResult | null>(null);
+  const [parsedMeanings, setParsedMeanings] = useState<ParsedMeaning[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -41,14 +45,22 @@ export function Generator({ settings, isLoading: settingsLoading = false }: Gene
 
     setIsLoading(true);
     try {
+      const promptWithBank = settings.promptTemplate.replace(
+        /\{\{Concept Bank\}\}/gi,
+        conceptBank
+      );
       const result = await generateVocabulary(
         word,
         example,
-        settings.promptTemplate,
+        promptWithBank,
         settings.outputFields,
         { apiKey: settings.apiKey, baseUrl: settings.baseUrl, model: settings.model },
       );
       setResults(result);
+      if (result.rawOutput) {
+        const meanings = parsePolysemicMarkerTags(result.rawOutput, settings.outputFields);
+        setParsedMeanings(meanings);
+      }
       toast.success('Vocabulary extracted successfully!');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to generate vocabulary';
@@ -107,6 +119,7 @@ export function Generator({ settings, isLoading: settingsLoading = false }: Gene
     setWord('');
     setExample('');
     setResults(null);
+    setParsedMeanings(null);
   };
 
   const handleCopyRawOutput = () => {
@@ -156,6 +169,8 @@ export function Generator({ settings, isLoading: settingsLoading = false }: Gene
             showRawOutput={showRawOutput}
             onToggleRawOutput={() => setShowRawOutput(!showRawOutput)}
             onCopyRawOutput={handleCopyRawOutput}
+            parsedMeanings={parsedMeanings}
+            word={word}
           />
 
           <ActionButtons

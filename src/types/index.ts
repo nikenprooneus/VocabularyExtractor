@@ -86,6 +86,37 @@ export interface VocabularyEntry {
   created_at: string;
 }
 
+export interface Concept {
+  id: string;
+  userId: string;
+  name: string;
+  parentId: string | null;
+  createdAt: string;
+}
+
+export interface ParsedMeaning {
+  [fieldName: string]: string;
+}
+
+export type ConceptNodeStatus = 'EXISTING' | 'NEW';
+
+export interface ConceptTreeNode {
+  name: string;
+  status: ConceptNodeStatus;
+  tier: 'word' | 1 | 2 | 3;
+}
+
+export interface ConceptContextType {
+  concepts: Concept[];
+  conceptBank: string;
+  refreshConcepts: () => Promise<void>;
+  saveConceptsFromMeaning: (
+    nodes: ConceptTreeNode[],
+    wordName: string,
+    selectedNames: Set<string>
+  ) => Promise<void>;
+}
+
 export interface AuthContextType {
   user: UserProfile | null;
   session: Session | null;

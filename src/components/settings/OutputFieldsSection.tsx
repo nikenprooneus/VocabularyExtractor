@@ -175,7 +175,9 @@ export function OutputFieldsSection({
         </div>
         <div className="text-xs text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-200">
           <p className="font-medium mb-1">Use Marker Tags in your prompt:</p>
-          <p>Each field has a marker tag displayed below its name. Copy these tags and use them in your prompt template to extract specific values from the AI's response. The AI can provide detailed explanations alongside these tags.</p>
+          <p className="mb-2">Each field has a marker tag displayed below its name. Copy these tags and use them in your prompt template to extract specific values from the AI's response.</p>
+          <p className="font-medium mb-1">Concept Tree fields:</p>
+          <p>Add fields named <code className="bg-white px-1 rounded font-mono">Tier1</code>, <code className="bg-white px-1 rounded font-mono">Tier2</code>, <code className="bg-white px-1 rounded font-mono">Tier3</code>, and <code className="bg-white px-1 rounded font-mono">Context Definition</code> to enable the Concept Tree visualization. For polysemic words, use numbered tags in your prompt (e.g. <code className="bg-white px-1 rounded font-mono">&Tier1 1&{"{}"}</code>, <code className="bg-white px-1 rounded font-mono">&Tier1 2&{"{}"}</code>) alongside <code className="bg-white px-1 rounded font-mono">&No of Definition&{"{}"}</code>.</p>
         </div>
       </div>
     </div>
