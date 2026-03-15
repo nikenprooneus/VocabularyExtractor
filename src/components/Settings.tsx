@@ -17,9 +17,10 @@ import { FlashcardBuilderSection } from './settings/FlashcardBuilderSection';
 interface SettingsProps {
   settings: SettingsType;
   onSave: (settings: SettingsType) => void;
+  isLoading: boolean;
 }
 
-export function Settings({ settings, onSave }: SettingsProps) {
+export function Settings({ settings, onSave, isLoading }: SettingsProps) {
   const { user } = useAuth();
   const { syncFlashcardConfigs } = useSettings();
   const [apiKey, setApiKey] = useState(settings.apiKey);
@@ -31,7 +32,6 @@ export function Settings({ settings, onSave }: SettingsProps) {
   const [webhookUrl, setWebhookUrl] = useState(settings.webhookUrl);
   const [flashcardConfigs, setFlashcardConfigs] = useState<FlashcardConfig[]>(settings.flashcardConfigs || []);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -70,7 +70,6 @@ export function Settings({ settings, onSave }: SettingsProps) {
     setWebhookUrl(settings.webhookUrl || '');
     setOutputFields(settings.outputFields);
     setFlashcardConfigs(settings.flashcardConfigs || []);
-    setIsLoading(false);
   }, [settings]);
 
   const handleAddField = () => {

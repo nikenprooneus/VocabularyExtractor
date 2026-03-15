@@ -11,9 +11,10 @@ import { ActionButtons } from './generator/ActionButtons';
 
 interface GeneratorProps {
   settings: SettingsType;
+  isLoading?: boolean;
 }
 
-export function Generator({ settings }: GeneratorProps) {
+export function Generator({ settings, isLoading: settingsLoading = false }: GeneratorProps) {
   const { user } = useAuth();
   const [word, setWord] = useState('');
   const [example, setExample] = useState('');
@@ -117,7 +118,7 @@ export function Generator({ settings }: GeneratorProps) {
 
   return (
     <div className="space-y-6">
-      {!isLLMConfigured && (
+      {!settingsLoading && !isLLMConfigured && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <p className="text-sm text-yellow-800">
             <span className="font-semibold">Setup required:</span> Please configure your API Key,
@@ -126,7 +127,7 @@ export function Generator({ settings }: GeneratorProps) {
         </div>
       )}
 
-      {isLLMConfigured && !hasFlashcardConfig && (
+      {!settingsLoading && isLLMConfigured && !hasFlashcardConfig && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
           <p className="text-sm text-amber-800">
             <span className="font-semibold">Flashcard setup required:</span> Please configure at
