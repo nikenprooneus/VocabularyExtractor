@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader } from 'lucide-react';
+import { Loader, LayoutList, BrainCircuit, Share2 } from 'lucide-react';
 import { Settings as SettingsType, OutputField, FlashcardConfig } from '../types/index';
 import { testConnection } from '../services/apiService';
 import { saveOutputFields, upsertFlashcardConfig, deleteFlashcardConfig } from '../services/supabaseService';
@@ -33,6 +33,13 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
   const [flashcardConfigs, setFlashcardConfigs] = useState<FlashcardConfig[]>(settings.flashcardConfigs || []);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<'TMRND' | 'AI' | 'Export'>('TMRND');
+
+  const tabs = [
+    { key: 'TMRND' as const, label: 'TMRND', icon: LayoutList },
+    { key: 'AI' as const, label: 'AI', icon: BrainCircuit },
+    { key: 'Export' as const, label: 'Export', icon: Share2 },
+  ];
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -283,62 +290,95 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
   }
 
   return (
-    <div className="space-y-6">
-      <LLMConfigSection
-        apiKey={apiKey}
-        baseUrl={baseUrl}
-        model={model}
-        isTestingConnection={isTestingConnection}
-        onApiKeyChange={setApiKey}
-        onBaseUrlChange={setBaseUrl}
-        onModelChange={setModel}
-        onTestConnection={handleTestConnection}
-      />
+    <div className="flex flex-col md:flex-row gap-8 items-start">
+      <nav className="w-full md:w-56 shrink-0">
+        <ul className="flex flex-row md:flex-col gap-1">
+          {tabs.map(({ key, label, icon: Icon }) => {
+            const isActive = activeTab === key;
+            return (
+              <li key={key} className="flex-1 md:flex-none">
+                <button
+                  onClick={() => setActiveTab(key)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-150 ${
+                    isActive
+                      ? 'bg-slate-800 text-white shadow-sm'
+                      : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                  }`}
+                >
+                  <Icon size={16} className={isActive ? 'text-white' : 'text-slate-400'} />
+                  <span>{label}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
 
-      <OutputFieldsSection
-        outputFields={outputFields}
-        newFieldName={newFieldName}
-        onNewFieldNameChange={setNewFieldName}
-        onAddField={handleAddField}
-        onRemoveField={handleRemoveField}
-        onDragEnd={handleDragEnd}
-      />
-
-      <PromptTemplateSection
-        promptTemplate={promptTemplate}
-        onPromptTemplateChange={setPromptTemplate}
-      />
-
-      <WebhookSection
-        webhookUrl={webhookUrl}
-        onWebhookUrlChange={setWebhookUrl}
-      />
-
-      <FlashcardBuilderSection
-        flashcardConfigs={flashcardConfigs}
-        outputFields={outputFields}
-        getAvailableFields={getAvailableFields}
-        onAddCard={handleAddCard}
-        onDeleteCard={handleDeleteCard}
-        onFrontFieldChange={handleFrontFieldChange}
-        onBackFieldAdd={handleBackFieldAdd}
-        onRemoveFieldFromCard={handleRemoveFieldFromCard}
-      />
-
-      <button
-        onClick={handleSave}
-        disabled={isSaving}
-        className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white py-3 px-4 rounded-lg font-semibold transition flex items-center justify-center gap-2"
-      >
-        {isSaving ? (
+      <div className="flex-1 flex flex-col gap-6 min-w-0">
+        {activeTab === 'TMRND' && (
           <>
-            <Loader size={18} className="animate-spin" />
-            Saving...
+            <OutputFieldsSection
+              outputFields={outputFields}
+              newFieldName={newFieldName}
+              onNewFieldNameChange={setNewFieldName}
+              onAddField={handleAddField}
+              onRemoveField={handleRemoveField}
+              onDragEnd={handleDragEnd}
+            />
+
+            <PromptTemplateSection
+              promptTemplate={promptTemplate}
+              onPromptTemplateChange={setPromptTemplate}
+            />
+
+            <FlashcardBuilderSection
+              flashcardConfigs={flashcardConfigs}
+              outputFields={outputFields}
+              getAvailableFields={getAvailableFields}
+              onAddCard={handleAddCard}
+              onDeleteCard={handleDeleteCard}
+              onFrontFieldChange={handleFrontFieldChange}
+              onBackFieldAdd={handleBackFieldAdd}
+              onRemoveFieldFromCard={handleRemoveFieldFromCard}
+            />
           </>
-        ) : (
-          'Save Settings'
         )}
-      </button>
+
+        {activeTab === 'AI' && (
+          <LLMConfigSection
+            apiKey={apiKey}
+            baseUrl={baseUrl}
+            model={model}
+            isTestingConnection={isTestingConnection}
+            onApiKeyChange={setApiKey}
+            onBaseUrlChange={setBaseUrl}
+            onModelChange={setModel}
+            onTestConnection={handleTestConnection}
+          />
+        )}
+
+        {activeTab === 'Export' && (
+          <WebhookSection
+            webhookUrl={webhookUrl}
+            onWebhookUrlChange={setWebhookUrl}
+          />
+        )}
+
+        <button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white py-3 px-4 rounded-lg font-semibold transition flex items-center justify-center gap-2"
+        >
+          {isSaving ? (
+            <>
+              <Loader size={18} className="animate-spin" />
+              Saving...
+            </>
+          ) : (
+            'Save Settings'
+          )}
+        </button>
+      </div>
     </div>
   );
 }
