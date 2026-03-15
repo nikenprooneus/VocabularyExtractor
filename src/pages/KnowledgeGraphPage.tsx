@@ -65,29 +65,61 @@ export default function KnowledgeGraphPage() {
 
     if (!hasAnyFilter) return rawGraphData;
 
+    const getId = (nodeOrId: any): string =>
+      typeof nodeOrId === 'object' && nodeOrId !== null ? nodeOrId.id : nodeOrId;
+
     const allNodes = rawGraphData.nodes;
     const allLinks = rawGraphData.links;
 
-    const nodeById = new Map<string, GraphNode>();
-    for (const n of allNodes) nodeById.set(n.id, n);
+    const hasConceptFilter = !!conceptText.trim();
+    let validConceptIds = new Set<string>();
 
-    const conceptConceptLinks = allLinks.filter((l) => l.linkType === 'concept-concept');
-    const wordConceptLinks = allLinks.filter((l) => l.linkType === 'word-concept');
-    const wordTmrndLinks = allLinks.filter((l) => l.linkType === 'word-tmrnd');
+    if (hasConceptFilter) {
+      const lowerFilter = conceptText.trim().toLowerCase();
 
-    const childToParents = new Map<string, string[]>();
-    for (const l of conceptConceptLinks) {
-      const src = typeof l.source === 'string' ? l.source : (l.source as GraphNode).id;
-      const tgt = typeof l.target === 'string' ? l.target : (l.target as GraphNode).id;
-      const parents = childToParents.get(tgt) ?? [];
-      parents.push(src);
-      childToParents.set(tgt, parents);
+      const matchedIds = new Set(
+        allNodes
+          .filter((n) => n.type === 'concept' && n.label.toLowerCase().includes(lowerFilter))
+          .map((n) => n.id)
+      );
+
+      const descendants = new Set(matchedIds);
+      let added = true;
+      while (added) {
+        added = false;
+        allLinks.forEach((l) => {
+          if (l.linkType === 'concept-concept') {
+            const src = getId(l.source);
+            const tgt = getId(l.target);
+            if (descendants.has(src) && !descendants.has(tgt)) {
+              descendants.add(tgt);
+              added = true;
+            }
+          }
+        });
+      }
+
+      const ancestors = new Set(matchedIds);
+      added = true;
+      while (added) {
+        added = false;
+        allLinks.forEach((l) => {
+          if (l.linkType === 'concept-concept') {
+            const src = getId(l.source);
+            const tgt = getId(l.target);
+            if (ancestors.has(tgt) && !ancestors.has(src)) {
+              ancestors.add(src);
+              added = true;
+            }
+          }
+        });
+      }
+
+      validConceptIds = new Set([...descendants, ...ancestors]);
     }
 
-    const wordNodes = allNodes.filter((n) => n.type === 'word');
     const survivingWordIds = new Set<string>();
-
-    for (const wNode of wordNodes) {
+    for (const wNode of allNodes.filter((n) => n.type === 'word')) {
       if (wordText && !wNode.label.toLowerCase().includes(wordText.toLowerCase())) continue;
       const p = wNode.payload;
       if (!p) continue;
@@ -97,57 +129,54 @@ export default function KnowledgeGraphPage() {
       if (nuanceId && p.nuanceId !== nuanceId) continue;
       if (registerId && p.registerId !== registerId) continue;
       if (wordLinkId && p.wordLinkId !== wordLinkId) continue;
+      if (hasConceptFilter && p.conceptId && !validConceptIds.has(p.conceptId)) continue;
       survivingWordIds.add(wNode.id);
     }
 
-    const survivingConceptIds = new Set<string>();
-
-    const seedConceptIds = new Set<string>();
-    for (const l of wordConceptLinks) {
-      const src = typeof l.source === 'string' ? l.source : (l.source as GraphNode).id;
-      const tgt = typeof l.target === 'string' ? l.target : (l.target as GraphNode).id;
-      if (survivingWordIds.has(src)) seedConceptIds.add(tgt);
+    const finalConceptIds = new Set<string>();
+    for (const wNode of allNodes.filter((n) => survivingWordIds.has(n.id))) {
+      if (wNode.payload?.conceptId) finalConceptIds.add(wNode.payload.conceptId);
+    }
+    if (hasConceptFilter) {
+      for (const id of validConceptIds) finalConceptIds.add(id);
     }
 
-    const walkAncestors = (conceptId: string) => {
-      if (survivingConceptIds.has(conceptId)) return;
-      survivingConceptIds.add(conceptId);
-      const parents = childToParents.get(conceptId) ?? [];
-      for (const p of parents) walkAncestors(p);
-    };
-
-    for (const cid of seedConceptIds) walkAncestors(cid);
-
-    if (conceptText) {
-      for (const cid of [...survivingConceptIds]) {
-        const n = nodeById.get(cid);
-        if (n && !n.label.toLowerCase().includes(conceptText.toLowerCase())) {
-          survivingConceptIds.delete(cid);
+    let added = true;
+    while (added) {
+      added = false;
+      allLinks.forEach((l) => {
+        if (l.linkType === 'concept-concept') {
+          const src = getId(l.source);
+          const tgt = getId(l.target);
+          if (finalConceptIds.has(tgt) && !finalConceptIds.has(src)) {
+            finalConceptIds.add(src);
+            added = true;
+          }
         }
-      }
+      });
     }
 
     const survivingTmrndIds = new Set<string>();
-    for (const l of wordTmrndLinks) {
-      const src = typeof l.source === 'string' ? l.source : (l.source as GraphNode).id;
-      const tgt = typeof l.target === 'string' ? l.target : (l.target as GraphNode).id;
+    for (const l of allLinks.filter((l) => l.linkType === 'word-tmrnd')) {
+      const src = getId(l.source);
+      const tgt = getId(l.target);
       if (survivingWordIds.has(src)) survivingTmrndIds.add(tgt);
     }
 
-    const survivingNodeIds = new Set<string>([
+    const finalNodeIds = new Set<string>([
       ...survivingWordIds,
-      ...survivingConceptIds,
+      ...finalConceptIds,
       ...survivingTmrndIds,
     ]);
 
-    const survivingNodes = allNodes.filter((n) => survivingNodeIds.has(n.id));
-    const survivingLinks = allLinks.filter((l) => {
-      const src = typeof l.source === 'string' ? l.source : (l.source as GraphNode).id;
-      const tgt = typeof l.target === 'string' ? l.target : (l.target as GraphNode).id;
-      return survivingNodeIds.has(src) && survivingNodeIds.has(tgt);
+    const finalNodes = allNodes.filter((n) => finalNodeIds.has(n.id));
+    const finalLinks = allLinks.filter((l) => {
+      const src = getId(l.source);
+      const tgt = getId(l.target);
+      return finalNodeIds.has(src) && finalNodeIds.has(tgt);
     });
 
-    return { nodes: survivingNodes, links: survivingLinks };
+    return { nodes: finalNodes, links: finalLinks };
   }, [rawGraphData, filters]);
 
   const hasActiveFilter = Object.values(filters).some((v) => v !== '');
