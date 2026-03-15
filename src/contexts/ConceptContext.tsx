@@ -4,7 +4,7 @@ import {
   fetchAllUserData,
   fetchWordLinks,
   findConceptByName,
-  findWordNode,
+  findWordNodeByWordId,
   insertConceptNode,
   upsertConceptRelationship,
   insertWordNode,
@@ -17,7 +17,8 @@ const ConceptContext = createContext<ConceptContextType | null>(null);
 function buildConceptBank(
   concepts: Concept[],
   conceptConcepts: ConceptConcept[],
-  conceptWords: ConceptWord[]
+  conceptWords: ConceptWord[],
+  wordTextById: Map<string, string>
 ): string {
   if (concepts.length === 0 && conceptWords.length === 0) return '';
 
@@ -41,7 +42,8 @@ function buildConceptBank(
   const lines: string[] = [];
 
   for (const w of conceptWords) {
-    const wordPart = w.wordLinkName ? `[${w.wordLinkName}] ${w.word}` : w.word;
+    const wordText = wordTextById.get(w.wordId) ?? w.wordId;
+    const wordPart = w.wordLinkName ? `[${w.wordLinkName}] ${wordText}` : wordText;
     if (w.conceptId) {
       const ancestry = getConceptAncestry(w.conceptId);
       lines.push(ancestry ? `${ancestry} > ${wordPart}` : wordPart);
@@ -59,6 +61,7 @@ export function ConceptProvider({ children }: { children: ReactNode }) {
   const [conceptConcepts, setConceptConcepts] = useState<ConceptConcept[]>([]);
   const [conceptWords, setConceptWords] = useState<ConceptWord[]>([]);
   const [wordLinks, setWordLinks] = useState<WordLink[]>([]);
+  const [wordTextById, setWordTextById] = useState<Map<string, string>>(new Map());
 
   const refreshConcepts = useCallback(async () => {
     if (!user) return;
@@ -66,6 +69,7 @@ export function ConceptProvider({ children }: { children: ReactNode }) {
     setConcepts(data.concepts);
     setConceptConcepts(data.conceptConcepts);
     setConceptWords(data.conceptWords);
+    setWordTextById(data.wordTextById);
   }, [user]);
 
   useEffect(() => {
@@ -79,6 +83,7 @@ export function ConceptProvider({ children }: { children: ReactNode }) {
       setConceptConcepts([]);
       setConceptWords([]);
       setWordLinks([]);
+      setWordTextById(new Map());
     }
   }, [user, refreshConcepts]);
 
@@ -95,7 +100,8 @@ export function ConceptProvider({ children }: { children: ReactNode }) {
   const saveConceptsFromMeaning = useCallback(
     async (
       nodes: ConceptTreeNode[],
-      wordName: string,
+      wordId: string,
+      wordText: string,
       selectedNames: Set<string>,
       conceptLink?: string,
       contextDefinition?: string
@@ -148,19 +154,18 @@ export function ConceptProvider({ children }: { children: ReactNode }) {
       const lastConceptNode = nodes[nodes.length - 1];
       const wordParentNorm = lastConceptNode ? normalizeStr(lastConceptNode.name) : null;
       const wordConceptId = wordParentNorm ? (resolvedIds.get(wordParentNorm) ?? null) : null;
-      const normalizedWord = normalizeStr(wordName);
       const wordLinkId = resolveWordLinkId(conceptLink);
 
-      const existingWord = await findWordNode(user.id, normalizedWord, wordConceptId);
+      const existingWord = await findWordNodeByWordId(wordId, wordConceptId);
 
       if (!existingWord) {
         try {
-          await insertWordNode(user.id, normalizedWord, wordConceptId, wordLinkId, contextDefinition ?? null);
+          await insertWordNode(user.id, wordId, wordConceptId, wordLinkId, contextDefinition ?? null);
           savedCount++;
         } catch {
-          const found = await findWordNode(user.id, normalizedWord, wordConceptId);
+          const found = await findWordNodeByWordId(wordId, wordConceptId);
           if (!found) {
-            console.error('Failed to insert word node for', normalizedWord);
+            console.error('Failed to insert word node for', wordText);
           }
         }
       } else {
@@ -181,7 +186,7 @@ export function ConceptProvider({ children }: { children: ReactNode }) {
     [user, refreshConcepts, resolveWordLinkId]
   );
 
-  const conceptBank = buildConceptBank(concepts, conceptConcepts, conceptWords);
+  const conceptBank = buildConceptBank(concepts, conceptConcepts, conceptWords, wordTextById);
 
   return (
     <ConceptContext.Provider

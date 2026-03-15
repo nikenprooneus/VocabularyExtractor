@@ -81,14 +81,68 @@ export interface OutputFieldDB {
   created_at: string;
 }
 
-export interface VocabularyEntry {
+export interface Tone {
   id: string;
-  user_id: string;
+  name: string;
+}
+
+export interface Dialect {
+  id: string;
+  name: string;
+}
+
+export interface Mode {
+  id: string;
+  name: string;
+}
+
+export interface Nuance {
+  id: string;
+  name: string;
+}
+
+export interface Register {
+  id: string;
+  name: string;
+}
+
+export interface LookupTables {
+  tones: Tone[];
+  dialects: Dialect[];
+  modes: Mode[];
+  nuances: Nuance[];
+  registers: Register[];
+}
+
+export interface ResolvedLookupIds {
+  toneId: string | null;
+  dialectId: string | null;
+  modeId: string | null;
+  nuanceId: string | null;
+  registerId: string | null;
+}
+
+export interface Word {
+  id: string;
+  userId: string;
   word: string;
   example: string;
-  results: GeneratedResult;
-  created_at: string;
+  note: GeneratedResult;
+  toneId: string | null;
+  dialectId: string | null;
+  modeId: string | null;
+  nuanceId: string | null;
+  registerId: string | null;
+  createdAt: string;
 }
+
+export interface WordWithContext extends Word {
+  conceptId: string | null;
+  wordLinkId: string | null;
+  contextDefinition: string | null;
+}
+
+export type VocabularyEntry = Word;
 
 export interface WordLink {
   id: string;
@@ -112,7 +166,7 @@ export interface ConceptConcept {
 export interface ConceptWord {
   id: string;
   userId: string;
-  word: string;
+  wordId: string;
   conceptId: string | null;
   wordLinkId?: string | null;
   wordLinkName?: string;
@@ -142,7 +196,8 @@ export interface ConceptContextType {
   refreshConcepts: () => Promise<void>;
   saveConceptsFromMeaning: (
     nodes: ConceptTreeNode[],
-    wordName: string,
+    wordId: string,
+    wordText: string,
     selectedNames: Set<string>,
     conceptLink?: string,
     contextDefinition?: string

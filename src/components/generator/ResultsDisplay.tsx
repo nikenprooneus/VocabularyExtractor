@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Copy, ChevronDown, ChevronUp } from 'lucide-react';
-import { Settings as SettingsType, GeneratedResult, ParsedMeaning } from '../../types/index';
+import { Settings as SettingsType, GeneratedResult, ParsedMeaning, ConceptTreeNode } from '../../types/index';
 import { FlashcardItem } from '../FlashcardItem';
 import { ConceptTreesSection } from '../concepttree/ConceptTreesSection';
 
@@ -10,9 +10,10 @@ interface ResultsDisplayProps {
   showRawOutput: boolean;
   onToggleRawOutput: () => void;
   onCopyRawOutput: () => void;
-  parsedMeanings?: ParsedMeaning[] | null;
+  parsedMeaning?: ParsedMeaning | null;
   word?: string;
   conceptTreeRawOutput?: string;
+  onConceptSelectionChange?: (nodes: ConceptTreeNode[], selectedNames: Set<string>, conceptLink: string, contextDefinition: string) => void;
 }
 
 export function ResultsDisplay({
@@ -21,9 +22,10 @@ export function ResultsDisplay({
   showRawOutput,
   onToggleRawOutput,
   onCopyRawOutput,
-  parsedMeanings,
+  parsedMeaning,
   word,
   conceptTreeRawOutput,
+  onConceptSelectionChange,
 }: ResultsDisplayProps) {
   const hasBothOutputs = !!(results.rawOutput && conceptTreeRawOutput);
 
@@ -78,8 +80,12 @@ export function ResultsDisplay({
         </div>
       )}
 
-      {parsedMeanings && parsedMeanings.length > 0 && word && (
-        <ConceptTreesSection parsedMeanings={parsedMeanings} word={word} />
+      {parsedMeaning && word && onConceptSelectionChange && (
+        <ConceptTreesSection
+          meaning={parsedMeaning}
+          word={word}
+          onSelectionChange={onConceptSelectionChange}
+        />
       )}
 
       {hasBothOutputs ? (

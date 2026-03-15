@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { DatabaseSettings, DatabaseFlashcardConfig, FlashcardConfig, OutputField, OutputFieldDB, VocabularyEntry, GeneratedResult, UserProfile } from '../types';
+import { DatabaseSettings, DatabaseFlashcardConfig, FlashcardConfig, OutputField, OutputFieldDB, GeneratedResult, UserProfile, Word, WordWithContext, LookupTables, ResolvedLookupIds } from '../types';
 
 export const fetchUserSettings = async (userId: string): Promise<DatabaseSettings | null> => {
   const { data, error } = await supabase
@@ -155,46 +155,124 @@ export const saveOutputFields = async (
   return results;
 };
 
-export const saveVocabularyEntry = async (
+const mapWordRow = (row: Record<string, unknown>): Word => ({
+  id: row.id as string,
+  userId: row.user_id as string,
+  word: row.word as string,
+  example: row.example as string,
+  note: row.note as GeneratedResult,
+  toneId: (row.tone_id as string) ?? null,
+  dialectId: (row.dialect_id as string) ?? null,
+  modeId: (row.mode_id as string) ?? null,
+  nuanceId: (row.nuance_id as string) ?? null,
+  registerId: (row.register_id as string) ?? null,
+  createdAt: row.created_at as string,
+});
+
+export const upsertWord = async (
   userId: string,
   word: string,
   example: string,
-  results: GeneratedResult
-): Promise<VocabularyEntry> => {
+  note: GeneratedResult,
+  lookupIds: ResolvedLookupIds
+): Promise<Word> => {
   const { data, error } = await supabase
-    .from('vocabulary_data')
-    .insert({
-      user_id: userId,
-      word,
-      example,
-      results,
-    })
+    .from('words')
+    .upsert(
+      {
+        user_id: userId,
+        word: word.toLowerCase().trim(),
+        example,
+        note,
+        tone_id: lookupIds.toneId,
+        dialect_id: lookupIds.dialectId,
+        mode_id: lookupIds.modeId,
+        nuance_id: lookupIds.nuanceId,
+        register_id: lookupIds.registerId,
+      },
+      { onConflict: 'user_id,word,example' }
+    )
     .select()
     .single();
 
   if (error) throw error;
-  return data;
+  return mapWordRow(data);
 };
 
-export const fetchVocabularyHistory = async (userId: string, limit = 50): Promise<VocabularyEntry[]> => {
+export const fetchWordsByTerm = async (
+  userId: string,
+  word: string
+): Promise<WordWithContext[]> => {
   const { data, error } = await supabase
-    .from('vocabulary_data')
+    .from('words')
+    .select(`
+      *,
+      concept_words (
+        concept_id,
+        word_link_id,
+        context_definition
+      )
+    `)
+    .eq('user_id', userId)
+    .eq('word', word.toLowerCase().trim())
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return (data || []).map((row) => {
+    const cw = Array.isArray(row.concept_words) ? row.concept_words[0] : null;
+    return {
+      ...mapWordRow(row),
+      conceptId: cw?.concept_id ?? null,
+      wordLinkId: cw?.word_link_id ?? null,
+      contextDefinition: cw?.context_definition ?? null,
+    };
+  });
+};
+
+export const fetchWordHistory = async (userId: string, limit = 50): Promise<Word[]> => {
+  const { data, error } = await supabase
+    .from('words')
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(limit);
 
   if (error) throw error;
-  return data || [];
+  return (data || []).map(mapWordRow);
 };
 
-export const deleteVocabularyEntry = async (entryId: string): Promise<void> => {
+export const deleteWord = async (wordId: string): Promise<void> => {
   const { error } = await supabase
-    .from('vocabulary_data')
+    .from('words')
     .delete()
-    .eq('id', entryId);
+    .eq('id', wordId);
 
   if (error) throw error;
+};
+
+export const fetchLookupTables = async (): Promise<LookupTables> => {
+  const [tonesRes, dialectsRes, modesRes, nuancesRes, registersRes] = await Promise.all([
+    supabase.from('tones').select('id, name').order('name'),
+    supabase.from('dialects').select('id, name').order('name'),
+    supabase.from('modes').select('id, name').order('name'),
+    supabase.from('nuances').select('id, name').order('name'),
+    supabase.from('registers').select('id, name').order('name'),
+  ]);
+
+  if (tonesRes.error) throw tonesRes.error;
+  if (dialectsRes.error) throw dialectsRes.error;
+  if (modesRes.error) throw modesRes.error;
+  if (nuancesRes.error) throw nuancesRes.error;
+  if (registersRes.error) throw registersRes.error;
+
+  return {
+    tones: tonesRes.data || [],
+    dialects: dialectsRes.data || [],
+    modes: modesRes.data || [],
+    nuances: nuancesRes.data || [],
+    registers: registersRes.data || [],
+  };
 };
 
 export const fetchAllProfiles = async (): Promise<UserProfile[]> => {

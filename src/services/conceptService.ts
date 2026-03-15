@@ -25,7 +25,7 @@ const mapConceptConceptRow = (row: ConceptRow): ConceptConcept => ({
 const mapConceptWordRow = (row: ConceptWordRow): ConceptWord => ({
   id: row.id as string,
   userId: row.user_id as string,
-  word: row.word as string,
+  wordId: row.word_id as string,
   conceptId: (row.concept_id as string) ?? null,
   wordLinkId: (row.word_link_id as string) ?? null,
   wordLinkName: row.word_links?.name ?? undefined,
@@ -37,7 +37,7 @@ const mapConceptWordRow = (row: ConceptWordRow): ConceptWord => ({
 
 export const fetchAllUserData = async (
   userId: string
-): Promise<{ concepts: Concept[]; conceptConcepts: ConceptConcept[]; conceptWords: ConceptWord[] }> => {
+): Promise<{ concepts: Concept[]; conceptConcepts: ConceptConcept[]; conceptWords: ConceptWord[]; wordTextById: Map<string, string> }> => {
   const [conceptsRes, edgesRes, wordsRes] = await Promise.all([
     supabase
       .from('concepts')
@@ -50,7 +50,7 @@ export const fetchAllUserData = async (
       .eq('user_id', userId),
     supabase
       .from('concept_words')
-      .select('*, word_links(name)')
+      .select('*, word_links(name), words(word)')
       .eq('user_id', userId)
       .order('created_at', { ascending: true }),
   ]);
@@ -59,10 +59,19 @@ export const fetchAllUserData = async (
   if (edgesRes.error) throw edgesRes.error;
   if (wordsRes.error) throw wordsRes.error;
 
+  const wordTextById = new Map<string, string>();
+  for (const row of (wordsRes.data || [])) {
+    const wRow = row as Record<string, unknown> & { words?: { word: string } | null };
+    if (wRow.word_id && wRow.words?.word) {
+      wordTextById.set(wRow.word_id as string, wRow.words.word);
+    }
+  }
+
   return {
     concepts: (conceptsRes.data || []).map(mapConceptRow),
     conceptConcepts: (edgesRes.data || []).map(mapConceptConceptRow),
     conceptWords: (wordsRes.data || []).map(mapConceptWordRow),
+    wordTextById,
   };
 };
 
@@ -93,16 +102,14 @@ export const findConceptByName = async (
   return data ? mapConceptRow(data) : null;
 };
 
-export const findWordNode = async (
-  userId: string,
-  word: string,
+export const findWordNodeByWordId = async (
+  wordId: string,
   conceptId: string | null
 ): Promise<ConceptWord | null> => {
   let query = supabase
     .from('concept_words')
     .select('*, word_links(name)')
-    .eq('user_id', userId)
-    .eq('word', normalize(word));
+    .eq('word_id', wordId);
 
   if (conceptId === null) {
     query = query.is('concept_id', null);
@@ -148,7 +155,7 @@ export const upsertConceptRelationship = async (
 
 export const insertWordNode = async (
   userId: string,
-  word: string,
+  wordId: string,
   conceptId: string | null,
   wordLinkId?: string | null,
   contextDefinition?: string | null
@@ -157,7 +164,7 @@ export const insertWordNode = async (
     .from('concept_words')
     .insert({
       user_id: userId,
-      word: normalize(word),
+      word_id: wordId,
       concept_id: conceptId ?? null,
       word_link_id: wordLinkId ?? null,
       context_definition: contextDefinition ?? null,

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Save, BookOpen } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import { ParsedMeaning, ConceptTreeNode } from '../../types';
 import { ConceptNode } from './ConceptNode';
 import { useConceptContext } from '../../contexts/ConceptContext';
@@ -7,11 +7,10 @@ import { useConceptContext } from '../../contexts/ConceptContext';
 interface MeaningTreeCardProps {
   meaning: ParsedMeaning;
   word: string;
-  meaningIndex: number;
-  totalMeanings: number;
+  onSelectionChange: (nodes: ConceptTreeNode[], selectedNames: Set<string>, conceptLink: string, contextDefinition: string) => void;
 }
 
-function buildNodes(meaning: ParsedMeaning, existingConceptNames: Set<string>): ConceptTreeNode[] {
+export function buildNodes(meaning: ParsedMeaning, existingConceptNames: Set<string>): ConceptTreeNode[] {
   const tierFields = ['Tier1', 'Tier2', 'Tier3'] as const;
   const nodes: ConceptTreeNode[] = [];
 
@@ -30,9 +29,8 @@ function buildNodes(meaning: ParsedMeaning, existingConceptNames: Set<string>): 
   return nodes;
 }
 
-export function MeaningTreeCard({ meaning, word, meaningIndex, totalMeanings }: MeaningTreeCardProps) {
-  const { concepts, conceptWords, saveConceptsFromMeaning } = useConceptContext();
-  const [isSaving, setIsSaving] = useState(false);
+export function MeaningTreeCard({ meaning, word, onSelectionChange }: MeaningTreeCardProps) {
+  const { concepts, conceptWords } = useConceptContext();
 
   const existingConceptNames = new Set(
     concepts.map((c) => c.name.toLowerCase().trim())
@@ -47,9 +45,7 @@ export function MeaningTreeCard({ meaning, word, meaningIndex, totalMeanings }: 
     ? concepts.find((c) => c.name.toLowerCase().trim() === lastTierName)
     : null;
   const wordAlreadyExists = conceptWords.some(
-    (w) =>
-      w.word.toLowerCase().trim() === word.toLowerCase().trim() &&
-      w.conceptId === (wordParentConcept?.id ?? null)
+    (w) => w.conceptId === (wordParentConcept?.id ?? null)
   );
 
   const newNodes = nodes.filter((n) => n.status === 'NEW');
@@ -68,24 +64,15 @@ export function MeaningTreeCard({ meaning, word, meaningIndex, totalMeanings }: 
       } else {
         next.add(name);
       }
+      onSelectionChange(nodes, next, conceptLink, contextDefinition);
       return next;
     });
-  }, []);
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      await saveConceptsFromMeaning(nodes, word, selectedNames, conceptLink || undefined, contextDefinition || undefined);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-  const hasAnyNodes = nodes.length > 0;
-  const hasNewSelected = newNodes.some((n) => selectedNames.has(n.name)) || hasNewWord;
+  }, [nodes, conceptLink, contextDefinition, onSelectionChange]);
 
   const newCount = newNodes.length + (hasNewWord ? 1 : 0);
   const existingConceptCount = nodes.filter((n) => n.status === 'EXISTING').length;
   const existingCount = existingConceptCount + (wordAlreadyExists ? 1 : 0);
+  const hasAnyNodes = nodes.length > 0;
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
@@ -93,7 +80,7 @@ export function MeaningTreeCard({ meaning, word, meaningIndex, totalMeanings }: 
         <div className="flex items-center gap-2">
           <BookOpen size={15} className="text-gray-400" />
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            {totalMeanings > 1 ? `Meaning ${meaningIndex}` : 'Meaning'}
+            Meaning
           </span>
         </div>
         {hasAnythingNew && (
@@ -153,7 +140,7 @@ export function MeaningTreeCard({ meaning, word, meaningIndex, totalMeanings }: 
         </p>
       )}
 
-      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+      <div className="flex items-center pt-3 border-t border-gray-100">
         <div className="flex gap-3 text-xs text-gray-400">
           {existingCount > 0 && (
             <span>{existingCount} existing</span>
@@ -161,20 +148,10 @@ export function MeaningTreeCard({ meaning, word, meaningIndex, totalMeanings }: 
           {newCount > 0 && (
             <span className="text-emerald-600">{newCount} new</span>
           )}
+          {!hasAnythingNew && (
+            <span className="italic">All concepts exist</span>
+          )}
         </div>
-        {hasAnythingNew && (
-          <button
-            onClick={handleSave}
-            disabled={isSaving || !hasNewSelected}
-            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <Save size={13} />
-            {isSaving ? 'Saving...' : 'Save Selected'}
-          </button>
-        )}
-        {!hasAnythingNew && (
-          <span className="text-xs text-gray-400 italic">All concepts exist</span>
-        )}
       </div>
     </div>
   );

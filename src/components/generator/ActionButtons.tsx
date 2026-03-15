@@ -31,7 +31,7 @@ export function ActionButtons({
           ) : (
             <>
               <Save size={18} />
-              Save to History
+              Save Complete Analysis
             </>
           )}
         </button>
