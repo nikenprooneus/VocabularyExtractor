@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Loader } from 'lucide-react';
 import { Settings as SettingsType, OutputField, FlashcardConfig } from '../types/index';
 import { testConnection } from '../services/apiService';
-import { upsertUserSettings, saveOutputFields, upsertFlashcardConfig, deleteFlashcardConfig } from '../services/supabaseService';
+import { saveOutputFields, upsertFlashcardConfig, deleteFlashcardConfig } from '../services/supabaseService';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import toast from 'react-hot-toast';
@@ -22,7 +22,7 @@ interface SettingsProps {
 
 export function Settings({ settings, onSave, isLoading }: SettingsProps) {
   const { user } = useAuth();
-  const { syncFlashcardConfigs } = useSettings();
+  const { syncFlashcardConfigs, updateSettings } = useSettings();
   const [apiKey, setApiKey] = useState(settings.apiKey);
   const [baseUrl, setBaseUrl] = useState(settings.baseUrl);
   const [model, setModel] = useState(settings.model);
@@ -49,6 +49,7 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
           await saveOutputFields(
             user.id,
             reorderedFields.map((field, index) => ({
+              id: field.id,
               name: field.name,
               display_order: index,
             }))
@@ -237,11 +238,6 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
   };
 
   const handleSave = async () => {
-    if (!user) {
-      toast.error('User not authenticated');
-      return;
-    }
-
     if (!apiKey.trim()) {
       toast.error('API Key is required');
       return;
@@ -257,23 +253,6 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
 
     setIsSaving(true);
     try {
-      await upsertUserSettings(user.id, {
-        api_key: apiKey,
-        base_url: baseUrl,
-        model,
-        prompt_template: promptTemplate,
-        webhook_url: webhookUrl,
-      });
-
-      await saveOutputFields(
-        user.id,
-        outputFields.map((field, index) => ({
-          id: field.id,
-          name: field.name,
-          display_order: index,
-        }))
-      );
-
       const updatedSettings: SettingsType = {
         apiKey,
         baseUrl,
@@ -283,10 +262,10 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
         webhookUrl,
         flashcardConfigs,
       };
+      await updateSettings(updatedSettings);
       onSave(updatedSettings);
-      toast.success('Settings saved successfully!');
     } catch {
-      toast.error('Failed to save settings');
+      // error toast is handled by updateSettings
     } finally {
       setIsSaving(false);
     }

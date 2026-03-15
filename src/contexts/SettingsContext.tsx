@@ -91,12 +91,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       });
 
       const outputFieldsToSave = newSettings.outputFields.map((field, index) => ({
+        id: field.id,
         name: field.name,
         display_order: index,
       }));
-      await saveOutputFields(user.id, outputFieldsToSave);
+      const savedFields = await saveOutputFields(user.id, outputFieldsToSave);
 
-      setSettings(newSettings);
+      const sortedSaved = [...savedFields].sort((a, b) => a.display_order - b.display_order);
+      const outputFields = sortedSaved.map((f) => ({ id: f.id, name: f.name }));
+
+      setSettings({ ...newSettings, outputFields });
       toast.success('Settings saved successfully');
     } catch {
       toast.error('Failed to save settings');
