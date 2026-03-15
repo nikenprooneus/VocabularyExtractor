@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { Concept, ConceptContextType, ConceptTreeNode } from '../types';
+import { ConceptWord, WordLink, ConceptContextType, ConceptTreeNode } from '../types';
 import {
   fetchUserConcepts,
+  fetchWordLinks,
   findConceptByNameAndType,
   insertConcept,
   updateConceptParent,
@@ -11,18 +12,18 @@ import toast from 'react-hot-toast';
 
 const ConceptContext = createContext<ConceptContextType | null>(null);
 
-function buildConceptBank(concepts: Concept[]): string {
+function buildConceptBank(concepts: ConceptWord[]): string {
   if (concepts.length === 0) return '';
 
-  const byId = new Map<string, Concept>(concepts.map((c) => [c.id, c]));
+  const byId = new Map<string, ConceptWord>(concepts.map((c) => [c.id, c]));
 
-  const getAncestry = (concept: Concept): string => {
+  const getAncestry = (concept: ConceptWord): string => {
     const path: string[] = [];
-    let current: Concept | undefined = concept;
+    let current: ConceptWord | undefined = concept;
 
     while (current) {
-      if (current.nodeType === 'word' && current.conceptLink) {
-        path.unshift(`[${current.conceptLink}] ${current.name}`);
+      if (current.nodeType === 'word' && current.wordLinkName) {
+        path.unshift(`[${current.wordLinkName}] ${current.name}`);
       } else {
         path.unshift(current.name);
       }
@@ -37,7 +38,8 @@ function buildConceptBank(concepts: Concept[]): string {
 
 export function ConceptProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [concepts, setConcepts] = useState<Concept[]>([]);
+  const [concepts, setConcepts] = useState<ConceptWord[]>([]);
+  const [wordLinks, setWordLinks] = useState<WordLink[]>([]);
 
   const refreshConcepts = useCallback(async () => {
     if (!user) return;
@@ -48,10 +50,24 @@ export function ConceptProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (user) {
       refreshConcepts().catch(() => {});
+      fetchWordLinks()
+        .then(setWordLinks)
+        .catch(() => {});
     } else {
       setConcepts([]);
+      setWordLinks([]);
     }
   }, [user, refreshConcepts]);
+
+  const resolveWordLinkId = useCallback(
+    (conceptLink: string | undefined): string | null => {
+      if (!conceptLink) return null;
+      const normalized = conceptLink.toLowerCase().trim();
+      const match = wordLinks.find((wl) => wl.name.toLowerCase().trim() === normalized);
+      return match?.id ?? null;
+    },
+    [wordLinks]
+  );
 
   const saveConceptsFromMeaning = useCallback(
     async (
@@ -106,13 +122,13 @@ export function ConceptProvider({ children }: { children: ReactNode }) {
       const wordParentNorm = lastConceptNode ? normalizeStr(lastConceptNode.name) : null;
       const wordParentId = wordParentNorm ? (resolvedIds.get(wordParentNorm) ?? null) : null;
       const normalizedWord = normalizeStr(wordName);
-      const link = conceptLink?.trim() || null;
+      const wordLinkId = resolveWordLinkId(conceptLink);
 
       const existingWord = await findConceptByNameAndType(user.id, normalizedWord, 'word', wordParentId);
 
       if (!existingWord) {
         try {
-          await insertConcept(user.id, normalizedWord, wordParentId, 'word', link, contextDefinition ?? null);
+          await insertConcept(user.id, normalizedWord, wordParentId, 'word', wordLinkId, contextDefinition ?? null);
           savedCount++;
         } catch {
           const found = await findConceptByNameAndType(user.id, normalizedWord, 'word', wordParentId);
@@ -135,13 +151,13 @@ export function ConceptProvider({ children }: { children: ReactNode }) {
         toast(`All selected concepts already exist in your bank`, { icon: 'ℹ️' });
       }
     },
-    [user, refreshConcepts]
+    [user, refreshConcepts, resolveWordLinkId]
   );
 
   const conceptBank = buildConceptBank(concepts);
 
   return (
-    <ConceptContext.Provider value={{ concepts, conceptBank, refreshConcepts, saveConceptsFromMeaning }}>
+    <ConceptContext.Provider value={{ concepts, wordLinks, conceptBank, refreshConcepts, saveConceptsFromMeaning }}>
       {children}
     </ConceptContext.Provider>
   );

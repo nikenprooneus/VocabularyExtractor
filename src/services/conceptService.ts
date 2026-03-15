@@ -1,23 +1,28 @@
 import { supabase } from '../lib/supabase';
-import { Concept } from '../types';
+import { ConceptWord, WordLink } from '../types';
 
 const normalize = (name: string) => name.toLowerCase().trim();
 
-const mapRow = (row: Record<string, unknown>): Concept => ({
+type ConceptWordRow = Record<string, unknown> & {
+  word_links?: { name: string } | null;
+};
+
+const mapRow = (row: ConceptWordRow): ConceptWord => ({
   id: row.id as string,
   userId: row.user_id as string,
   name: row.name as string,
   parentId: (row.parent_id as string) ?? null,
   nodeType: (row.node_type as 'concept' | 'word') ?? 'concept',
-  conceptLink: (row.concept_link as string) ?? null,
+  wordLinkId: (row.word_link_id as string) ?? null,
+  wordLinkName: row.word_links?.name ?? undefined,
   contextDefinition: (row.context_definition as string) ?? null,
   createdAt: row.created_at as string,
 });
 
-export const fetchUserConcepts = async (userId: string): Promise<Concept[]> => {
+export const fetchUserConcepts = async (userId: string): Promise<ConceptWord[]> => {
   const { data, error } = await supabase
-    .from('concepts')
-    .select('*')
+    .from('concept_words')
+    .select('*, word_links(name)')
     .eq('user_id', userId)
     .order('created_at', { ascending: true });
 
@@ -25,15 +30,25 @@ export const fetchUserConcepts = async (userId: string): Promise<Concept[]> => {
   return (data || []).map(mapRow);
 };
 
+export const fetchWordLinks = async (): Promise<WordLink[]> => {
+  const { data, error } = await supabase
+    .from('word_links')
+    .select('id, name')
+    .order('name', { ascending: true });
+
+  if (error) throw error;
+  return (data || []) as WordLink[];
+};
+
 export const findConceptByNameAndType = async (
   userId: string,
   name: string,
   nodeType: 'concept' | 'word',
   parentId?: string | null
-): Promise<Concept | null> => {
+): Promise<ConceptWord | null> => {
   let query = supabase
-    .from('concepts')
-    .select('*')
+    .from('concept_words')
+    .select('*, word_links(name)')
     .eq('user_id', userId)
     .eq('name', normalize(name))
     .eq('node_type', nodeType);
@@ -56,20 +71,20 @@ export const insertConcept = async (
   name: string,
   parentId: string | null,
   nodeType: 'concept' | 'word' = 'concept',
-  conceptLink?: string | null,
+  wordLinkId?: string | null,
   contextDefinition?: string | null
-): Promise<Concept> => {
+): Promise<ConceptWord> => {
   const { data, error } = await supabase
-    .from('concepts')
+    .from('concept_words')
     .insert({
       user_id: userId,
       name: normalize(name),
       parent_id: parentId ?? null,
       node_type: nodeType,
-      concept_link: conceptLink ?? null,
+      word_link_id: wordLinkId ?? null,
       context_definition: contextDefinition ?? null,
     })
-    .select()
+    .select('*, word_links(name)')
     .single();
 
   if (error) throw error;
@@ -81,7 +96,7 @@ export const updateConceptParent = async (
   parentId: string | null
 ): Promise<void> => {
   const { error } = await supabase
-    .from('concepts')
+    .from('concept_words')
     .update({ parent_id: parentId })
     .eq('id', conceptId);
 

@@ -90,13 +90,19 @@ export interface VocabularyEntry {
   created_at: string;
 }
 
-export interface Concept {
+export interface WordLink {
+  id: string;
+  name: string;
+}
+
+export interface ConceptWord {
   id: string;
   userId: string;
   name: string;
   parentId: string | null;
   nodeType: 'concept' | 'word';
-  conceptLink?: string | null;
+  wordLinkId?: string | null;
+  wordLinkName?: string;
   contextDefinition?: string | null;
   createdAt: string;
 }
@@ -115,7 +121,8 @@ export interface ConceptTreeNode {
 }
 
 export interface ConceptContextType {
-  concepts: Concept[];
+  concepts: ConceptWord[];
+  wordLinks: WordLink[];
   conceptBank: string;
   refreshConcepts: () => Promise<void>;
   saveConceptsFromMeaning: (
