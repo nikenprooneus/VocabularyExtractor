@@ -23,8 +23,9 @@ export function Generator({ settings }: GeneratorProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [showRawOutput, setShowRawOutput] = useState(true);
 
-  const isSettingsConfigured =
-    settings.apiKey && settings.baseUrl && settings.outputFields.length > 0;
+  const isLLMConfigured = !!(settings.apiKey && settings.baseUrl && settings.outputFields.length > 0);
+  const hasFlashcardConfig = settings.flashcardConfigs.length > 0;
+  const isSettingsConfigured = isLLMConfigured && hasFlashcardConfig;
 
   const handleGenerate = async () => {
     if (!word.trim()) {
@@ -116,11 +117,20 @@ export function Generator({ settings }: GeneratorProps) {
 
   return (
     <div className="space-y-6">
-      {!isSettingsConfigured && (
+      {!isLLMConfigured && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <p className="text-sm text-yellow-800">
-            <span className="font-semibold">Setup required:</span> Please configure your settings
-            (API Key, Base URL, and at least one output field) before generating vocabulary.
+            <span className="font-semibold">Setup required:</span> Please configure your API Key,
+            Base URL, and at least one output field in the Settings tab before generating.
+          </p>
+        </div>
+      )}
+
+      {isLLMConfigured && !hasFlashcardConfig && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <p className="text-sm text-amber-800">
+            <span className="font-semibold">Flashcard setup required:</span> Please configure at
+            least one Flashcard in the Settings tab before generating.
           </p>
         </div>
       )}

@@ -45,20 +45,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         fetchFlashcardConfigs(user.id),
       ]);
 
+      const sortedFields = [...dbOutputFields].sort((a, b) => a.display_order - b.display_order);
+      const outputFields: OutputField[] = sortedFields.map((field) => ({
+        id: field.id,
+        name: field.name,
+      }));
+
+      const flashcardConfigs: FlashcardConfig[] = dbFlashcardConfigs.map((row) => ({
+        id: row.id,
+        cardOrder: row.card_order,
+        frontFieldId: row.front_field_id,
+        backFieldIds: row.back_field_ids,
+      }));
+
       if (dbSettings) {
-        const sortedFields = [...dbOutputFields].sort((a, b) => a.display_order - b.display_order);
-        const outputFields: OutputField[] = sortedFields.map((field) => ({
-          id: field.id,
-          name: field.name,
-        }));
-
-        const flashcardConfigs: FlashcardConfig[] = dbFlashcardConfigs.map((row) => ({
-          id: row.id,
-          cardOrder: row.card_order,
-          frontFieldId: row.front_field_id,
-          backFieldIds: row.back_field_ids,
-        }));
-
         setSettings({
           apiKey: dbSettings.api_key,
           baseUrl: dbSettings.base_url,
@@ -68,6 +68,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           webhookUrl: dbSettings.webhook_url,
           flashcardConfigs,
         });
+      } else {
+        setSettings((prev) => ({ ...prev, outputFields, flashcardConfigs }));
       }
     } catch {
       // Errors are handled by the caller via toast
