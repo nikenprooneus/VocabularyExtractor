@@ -15,6 +15,7 @@ const TMRND_COLORS: Record<string, string> = {
   mode: 'bg-emerald-400',
   nuance: 'bg-rose-400',
   register: 'bg-violet-400',
+  wordLink: 'bg-blue-400',
 };
 
 export function FilterSidebar({
@@ -37,6 +38,7 @@ export function FilterSidebar({
       modeId: '',
       nuanceId: '',
       registerId: '',
+      wordLinkId: '',
     });
 
   const nodeCount = filteredGraphData.nodes.length;
@@ -53,6 +55,7 @@ export function FilterSidebar({
     { key: 'modeId', label: 'Mode', subType: 'mode', items: lookupTables.modes },
     { key: 'nuanceId', label: 'Nuance', subType: 'nuance', items: lookupTables.nuances },
     { key: 'registerId', label: 'Register', subType: 'register', items: lookupTables.registers },
+    { key: 'wordLinkId', label: 'Relationship', subType: 'wordLink', items: lookupTables.wordLinks },
   ];
 
   return (

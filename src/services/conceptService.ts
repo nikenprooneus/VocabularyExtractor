@@ -245,8 +245,6 @@ export const fetchGraphData = async (
     links.push({ source: edge.parentId, target: edge.childId, linkType: 'concept-concept' });
   }
 
-  const tmrndNodeIds = new Set<string>();
-
   for (const word of words) {
     const cw = cwByWordId.get(word.id);
     const payload = {
@@ -286,18 +284,13 @@ export const fetchGraphData = async (
 
     for (const { subType, id } of tmrndLinks) {
       if (!id) continue;
-      const nodeId = `${subType}::${id}`;
-
-      if (!tmrndNodeIds.has(nodeId)) {
-        const table = lookupTables[`${subType}s` as keyof LookupTables] as { id: string; name: string }[];
-        const entry = table.find((t) => t.id === id);
-        if (entry) {
-          nodes.push({ id: nodeId, label: entry.name, type: 'tmrnd', tmrndSubType: subType });
-          tmrndNodeIds.add(nodeId);
-        }
+      const nodeId = `${word.id}-tmrnd-${subType}-${id}`;
+      const table = lookupTables[`${subType}s` as keyof LookupTables] as { id: string; name: string }[];
+      const entry = table.find((t) => t.id === id);
+      if (entry) {
+        nodes.push({ id: nodeId, label: entry.name, type: 'tmrnd', tmrndSubType: subType });
+        links.push({ source: word.id, target: nodeId, linkType: 'word-tmrnd' });
       }
-
-      links.push({ source: word.id, target: nodeId, linkType: 'word-tmrnd' });
     }
   }
 

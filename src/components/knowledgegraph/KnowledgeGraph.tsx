@@ -144,12 +144,40 @@ export function KnowledgeGraph({ graphData, onWordSelect, selectedWordId }: Know
         if (link.label && globalScale > 0.6) {
           const mx = (sx + tx) / 2;
           const my = (sy + ty) / 2;
-          const fontSize = 9 / globalScale;
-          ctx.font = `${fontSize}px Inter, sans-serif`;
-          ctx.fillStyle = '#64748b';
+          const fontSize = 11 / globalScale;
+          const paddingX = 5 / globalScale;
+          const paddingY = 2.5 / globalScale;
+          const radius = 4 / globalScale;
+
+          ctx.font = `${fontSize}px Sans-Serif`;
+          const textWidth = ctx.measureText(link.label).width;
+          const pillW = textWidth + paddingX * 2;
+          const pillH = fontSize + paddingY * 2;
+          const pillX = mx - pillW / 2;
+          const pillY = my - pillH / 2;
+
+          ctx.beginPath();
+          ctx.moveTo(pillX + radius, pillY);
+          ctx.lineTo(pillX + pillW - radius, pillY);
+          ctx.arcTo(pillX + pillW, pillY, pillX + pillW, pillY + radius, radius);
+          ctx.lineTo(pillX + pillW, pillY + pillH - radius);
+          ctx.arcTo(pillX + pillW, pillY + pillH, pillX + pillW - radius, pillY + pillH, radius);
+          ctx.lineTo(pillX + radius, pillY + pillH);
+          ctx.arcTo(pillX, pillY + pillH, pillX, pillY + pillH - radius, radius);
+          ctx.lineTo(pillX, pillY + radius);
+          ctx.arcTo(pillX, pillY, pillX + radius, pillY, radius);
+          ctx.closePath();
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(100, 116, 139, 0.5)';
+          ctx.lineWidth = 0.6 / globalScale;
+          ctx.stroke();
+
+          ctx.font = `${fontSize}px Sans-Serif`;
+          ctx.fillStyle = '#cbd5e1';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(link.label, mx, my - 4 / globalScale);
+          ctx.fillText(link.label, mx, my);
         }
       }
     },

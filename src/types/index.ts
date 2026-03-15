@@ -112,6 +112,7 @@ export interface LookupTables {
   modes: Mode[];
   nuances: Nuance[];
   registers: Register[];
+  wordLinks: WordLink[];
 }
 
 export interface ResolvedLookupIds {
@@ -271,4 +272,5 @@ export interface GraphFilters {
   modeId: string;
   nuanceId: string;
   registerId: string;
+  wordLinkId: string;
 }

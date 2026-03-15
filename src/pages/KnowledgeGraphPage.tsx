@@ -20,6 +20,7 @@ const EMPTY_LOOKUP: LookupTables = {
   modes: [],
   nuances: [],
   registers: [],
+  wordLinks: [],
 };
 
 const EMPTY_GRAPH: GraphData = { nodes: [], links: [] };
@@ -32,6 +33,7 @@ const DEFAULT_FILTERS: GraphFilters = {
   modeId: '',
   nuanceId: '',
   registerId: '',
+  wordLinkId: '',
 };
 
 export default function KnowledgeGraphPage() {
@@ -57,9 +59,9 @@ export default function KnowledgeGraphPage() {
   const filteredGraphData = useMemo<GraphData>(() => {
     if (!rawGraphData) return EMPTY_GRAPH;
 
-    const { conceptText, wordText, toneId, dialectId, modeId, nuanceId, registerId } = filters;
+    const { conceptText, wordText, toneId, dialectId, modeId, nuanceId, registerId, wordLinkId } = filters;
     const hasAnyFilter =
-      conceptText || wordText || toneId || dialectId || modeId || nuanceId || registerId;
+      conceptText || wordText || toneId || dialectId || modeId || nuanceId || registerId || wordLinkId;
 
     if (!hasAnyFilter) return rawGraphData;
 
@@ -94,6 +96,7 @@ export default function KnowledgeGraphPage() {
       if (modeId && p.modeId !== modeId) continue;
       if (nuanceId && p.nuanceId !== nuanceId) continue;
       if (registerId && p.registerId !== registerId) continue;
+      if (wordLinkId && p.wordLinkId !== wordLinkId) continue;
       survivingWordIds.add(wNode.id);
     }
 

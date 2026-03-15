@@ -252,12 +252,13 @@ export const deleteWord = async (wordId: string): Promise<void> => {
 };
 
 export const fetchLookupTables = async (): Promise<LookupTables> => {
-  const [tonesRes, dialectsRes, modesRes, nuancesRes, registersRes] = await Promise.all([
+  const [tonesRes, dialectsRes, modesRes, nuancesRes, registersRes, wordLinksRes] = await Promise.all([
     supabase.from('tones').select('id, name').order('name'),
     supabase.from('dialects').select('id, name').order('name'),
     supabase.from('modes').select('id, name').order('name'),
     supabase.from('nuances').select('id, name').order('name'),
     supabase.from('registers').select('id, name').order('name'),
+    supabase.from('word_links').select('id, name').order('name'),
   ]);
 
   if (tonesRes.error) throw tonesRes.error;
@@ -265,6 +266,7 @@ export const fetchLookupTables = async (): Promise<LookupTables> => {
   if (modesRes.error) throw modesRes.error;
   if (nuancesRes.error) throw nuancesRes.error;
   if (registersRes.error) throw registersRes.error;
+  if (wordLinksRes.error) throw wordLinksRes.error;
 
   return {
     tones: tonesRes.data || [],
@@ -272,6 +274,7 @@ export const fetchLookupTables = async (): Promise<LookupTables> => {
     modes: modesRes.data || [],
     nuances: nuancesRes.data || [],
     registers: registersRes.data || [],
+    wordLinks: wordLinksRes.data || [],
   };
 };
 
