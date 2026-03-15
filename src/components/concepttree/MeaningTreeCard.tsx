@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { BookOpen } from 'lucide-react';
 import { ParsedMeaning, ConceptTreeNode } from '../../types';
 import { ConceptNode } from './ConceptNode';
@@ -55,6 +55,10 @@ export function MeaningTreeCard({ meaning, word, onSelectionChange }: MeaningTre
   const [selectedNames, setSelectedNames] = useState<Set<string>>(
     () => new Set(newNodes.map((n) => n.name))
   );
+
+  useEffect(() => {
+    onSelectionChange(nodes, selectedNames, conceptLink, contextDefinition);
+  }, [nodes, selectedNames, conceptLink, contextDefinition, onSelectionChange]);
 
   const handleToggle = useCallback((name: string) => {
     setSelectedNames((prev) => {

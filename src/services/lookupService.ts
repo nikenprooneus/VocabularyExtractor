@@ -7,12 +7,12 @@ const matchId = (value: string | undefined, items: { id: string; name: string }[
 };
 
 export const resolveAllLookupIds = (
-  meaning: ParsedMeaning,
+  meaning: Record<string, string | undefined>,
   lookups: LookupTables
 ): ResolvedLookupIds => ({
   toneId: matchId(meaning['Tone'], lookups.tones),
-  dialectId: matchId(meaning['Dialect'], lookups.dialects),
-  modeId: matchId(meaning['Mode'], lookups.modes),
-  nuanceId: matchId(meaning['Nuance'], lookups.nuances),
+  dialectId: matchId(meaning['Dialect'] ?? meaning['Dialects'], lookups.dialects),
+  modeId: matchId(meaning['Mode'] ?? meaning['Modes'], lookups.modes),
+  nuanceId: matchId(meaning['Nuance'] ?? meaning['Nuances'], lookups.nuances),
   registerId: matchId(meaning['Register'], lookups.registers),
 });

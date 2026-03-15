@@ -196,10 +196,19 @@ export function Generator({ settings, isLoading: settingsLoading = false }: Gene
     setIsSaving(true);
     try {
       const lookups = await fetchLookupTables();
-      const ctMeaningForLookup = parsedMeaning ?? {};
-      const lookupIds = resolveAllLookupIds(ctMeaningForLookup, lookups);
+      const lookupIds = resolveAllLookupIds((results as any), lookups);
 
-      const savedWord = await upsertWord(user.id, word, example, results, lookupIds);
+      const cleanNote = { ...results } as any;
+      delete cleanNote['Tone'];
+      delete cleanNote['Dialect'];
+      delete cleanNote['Dialects'];
+      delete cleanNote['Mode'];
+      delete cleanNote['Modes'];
+      delete cleanNote['Nuance'];
+      delete cleanNote['Nuances'];
+      delete cleanNote['Register'];
+
+      const savedWord = await upsertWord(user.id, word, example, cleanNote, lookupIds);
 
       const sel = pendingConceptSelection.current;
       if (sel && (sel.nodes.length > 0 || sel.selectedNames.size > 0)) {
