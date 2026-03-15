@@ -55,7 +55,16 @@ export interface DatabaseSettings {
   model: string;
   prompt_template: string;
   webhook_url: string;
-  flashcard_configs: FlashcardConfig[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DatabaseFlashcardConfig {
+  id: string;
+  user_id: string;
+  card_order: number;
+  front_field_id: string;
+  back_field_ids: string[];
   created_at: string;
   updated_at: string;
 }

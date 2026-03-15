@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { DatabaseSettings, FlashcardConfig, OutputFieldDB, VocabularyEntry, GeneratedResult, UserProfile } from '../types';
+import { DatabaseSettings, DatabaseFlashcardConfig, FlashcardConfig, OutputFieldDB, VocabularyEntry, GeneratedResult, UserProfile } from '../types';
 
 export const fetchUserSettings = async (userId: string): Promise<DatabaseSettings | null> => {
   const { data, error } = await supabase
@@ -20,7 +20,6 @@ export const upsertUserSettings = async (
     model: string;
     prompt_template: string;
     webhook_url: string;
-    flashcard_configs?: FlashcardConfig[];
   }
 ): Promise<DatabaseSettings> => {
   const { data, error } = await supabase
@@ -38,6 +37,50 @@ export const upsertUserSettings = async (
 
   if (error) throw error;
   return data;
+};
+
+export const fetchFlashcardConfigs = async (userId: string): Promise<DatabaseFlashcardConfig[]> => {
+  const { data, error } = await supabase
+    .from('flashcard_configs')
+    .select('*')
+    .eq('user_id', userId)
+    .order('card_order', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+};
+
+export const upsertFlashcardConfig = async (
+  userId: string,
+  config: FlashcardConfig
+): Promise<DatabaseFlashcardConfig> => {
+  const { data, error } = await supabase
+    .from('flashcard_configs')
+    .upsert(
+      {
+        id: config.id,
+        user_id: userId,
+        card_order: config.cardOrder,
+        front_field_id: config.frontFieldId,
+        back_field_ids: config.backFieldIds,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'id' }
+    )
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+export const deleteFlashcardConfig = async (configId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('flashcard_configs')
+    .delete()
+    .eq('id', configId);
+
+  if (error) throw error;
 };
 
 export const fetchOutputFields = async (userId: string): Promise<OutputFieldDB[]> => {

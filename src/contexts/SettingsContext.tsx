@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Settings, OutputField, FlashcardConfig } from '../types/index';
 import { useAuth } from './AuthContext';
-import { fetchUserSettings, upsertUserSettings, fetchOutputFields, saveOutputFields } from '../services/supabaseService';
+import { fetchUserSettings, upsertUserSettings, fetchOutputFields, saveOutputFields, fetchFlashcardConfigs } from '../services/supabaseService';
 import toast from 'react-hot-toast';
 
 const DEFAULT_SETTINGS: Settings = {
@@ -39,9 +39,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     try {
       setIsLoading(true);
-      const [dbSettings, dbOutputFields] = await Promise.all([
+      const [dbSettings, dbOutputFields, dbFlashcardConfigs] = await Promise.all([
         fetchUserSettings(user.id),
         fetchOutputFields(user.id),
+        fetchFlashcardConfigs(user.id),
       ]);
 
       if (dbSettings) {
@@ -51,8 +52,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           name: field.name,
         }));
 
-        const flashcardConfigsData = dbSettings.flashcard_configs || [];
-        const flashcardConfigs = Array.isArray(flashcardConfigsData) ? flashcardConfigsData : [];
+        const flashcardConfigs: FlashcardConfig[] = dbFlashcardConfigs.map((row) => ({
+          id: row.id,
+          cardOrder: row.card_order,
+          frontFieldId: row.front_field_id,
+          backFieldIds: row.back_field_ids,
+        }));
 
         setSettings({
           apiKey: dbSettings.api_key,
@@ -81,7 +86,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         model: newSettings.model,
         prompt_template: newSettings.promptTemplate,
         webhook_url: newSettings.webhookUrl,
-        flashcard_configs: newSettings.flashcardConfigs || [],
       });
 
       const outputFieldsToSave = newSettings.outputFields.map((field, index) => ({

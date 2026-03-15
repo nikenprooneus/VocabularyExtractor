@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Loader } from 'lucide-react';
 import { Settings as SettingsType, OutputField, FlashcardConfig } from '../types/index';
 import { testConnection } from '../services/apiService';
-import { upsertUserSettings, saveOutputFields } from '../services/supabaseService';
+import { upsertUserSettings, saveOutputFields, upsertFlashcardConfig, deleteFlashcardConfig } from '../services/supabaseService';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import toast from 'react-hot-toast';
@@ -111,29 +111,11 @@ export function Settings({ settings, onSave }: SettingsProps) {
     );
   };
 
-  const saveFlashcardConfigs = async (configs: FlashcardConfig[]) => {
+  const handleAddCard = async () => {
     if (!user) return;
 
-    try {
-      await upsertUserSettings(user.id, {
-        api_key: apiKey,
-        base_url: baseUrl,
-        model,
-        prompt_template: promptTemplate,
-        webhook_url: webhookUrl,
-        flashcard_configs: configs,
-      });
-
-      syncFlashcardConfigs(configs);
-    } catch {
-      toast.error('Failed to save flashcard configuration');
-      throw new Error('Failed to save flashcard configuration');
-    }
-  };
-
-  const handleAddCard = async () => {
     const newCard: FlashcardConfig = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       cardOrder: flashcardConfigs.length,
       frontFieldId: '',
       backFieldIds: [],
@@ -142,72 +124,91 @@ export function Settings({ settings, onSave }: SettingsProps) {
     setFlashcardConfigs(newConfigs);
 
     try {
-      await saveFlashcardConfigs(newConfigs);
+      await upsertFlashcardConfig(user.id, newCard);
+      syncFlashcardConfigs(newConfigs);
       toast.success('Card added');
     } catch {
       setFlashcardConfigs(flashcardConfigs);
+      toast.error('Failed to add card');
     }
   };
 
   const handleDeleteCard = async (cardId: string) => {
+    if (!user) return;
+
     const newConfigs = flashcardConfigs.filter(c => c.id !== cardId);
     setFlashcardConfigs(newConfigs);
 
     try {
-      await saveFlashcardConfigs(newConfigs);
+      await deleteFlashcardConfig(cardId);
+      syncFlashcardConfigs(newConfigs);
       toast.success('Card deleted');
     } catch {
       setFlashcardConfigs(flashcardConfigs);
+      toast.error('Failed to delete card');
     }
   };
 
   const handleRemoveFieldFromCard = async (cardId: string, fieldId: string, location: 'front' | 'back') => {
-    const newConfigs = flashcardConfigs.map(config => {
-      if (config.id !== cardId) return config;
+    if (!user) return;
 
-      if (location === 'front') {
-        return { ...config, frontFieldId: '' };
-      } else {
-        return { ...config, backFieldIds: config.backFieldIds.filter(id => id !== fieldId) };
-      }
-    });
+    const updatedCard = flashcardConfigs.find(c => c.id === cardId);
+    if (!updatedCard) return;
+
+    const newCard: FlashcardConfig = location === 'front'
+      ? { ...updatedCard, frontFieldId: '' }
+      : { ...updatedCard, backFieldIds: updatedCard.backFieldIds.filter(id => id !== fieldId) };
+
+    const newConfigs = flashcardConfigs.map(c => c.id === cardId ? newCard : c);
     setFlashcardConfigs(newConfigs);
 
     try {
-      await saveFlashcardConfigs(newConfigs);
+      await upsertFlashcardConfig(user.id, newCard);
+      syncFlashcardConfigs(newConfigs);
       toast.success('Field removed');
     } catch {
       setFlashcardConfigs(flashcardConfigs);
+      toast.error('Failed to remove field');
     }
   };
 
   const handleFrontFieldChange = async (cardId: string, newFieldId: string) => {
-    const newConfigs = flashcardConfigs.map(c =>
-      c.id === cardId ? { ...c, frontFieldId: newFieldId } : c
-    );
+    if (!user) return;
+
+    const updatedCard = flashcardConfigs.find(c => c.id === cardId);
+    if (!updatedCard) return;
+
+    const newCard: FlashcardConfig = { ...updatedCard, frontFieldId: newFieldId };
+    const newConfigs = flashcardConfigs.map(c => c.id === cardId ? newCard : c);
     setFlashcardConfigs(newConfigs);
 
     try {
-      await saveFlashcardConfigs(newConfigs);
+      await upsertFlashcardConfig(user.id, newCard);
+      syncFlashcardConfigs(newConfigs);
       toast.success('Front field updated');
     } catch {
       setFlashcardConfigs(flashcardConfigs);
+      toast.error('Failed to update front field');
     }
   };
 
   const handleBackFieldAdd = async (cardId: string, newFieldId: string) => {
-    if (!newFieldId) return;
+    if (!newFieldId || !user) return;
 
-    const newConfigs = flashcardConfigs.map(c =>
-      c.id === cardId ? { ...c, backFieldIds: [...c.backFieldIds, newFieldId] } : c
-    );
+    const updatedCard = flashcardConfigs.find(c => c.id === cardId);
+    if (!updatedCard) return;
+
+    const newCard: FlashcardConfig = { ...updatedCard, backFieldIds: [...updatedCard.backFieldIds, newFieldId] };
+    const newConfigs = flashcardConfigs.map(c => c.id === cardId ? newCard : c);
     setFlashcardConfigs(newConfigs);
 
     try {
-      await saveFlashcardConfigs(newConfigs);
+      await upsertFlashcardConfig(user.id, newCard);
+      syncFlashcardConfigs(newConfigs);
       toast.success('Back field added');
     } catch {
       setFlashcardConfigs(flashcardConfigs);
+      toast.error('Failed to add back field');
     }
   };
 
@@ -263,7 +264,6 @@ export function Settings({ settings, onSave }: SettingsProps) {
         model,
         prompt_template: promptTemplate,
         webhook_url: webhookUrl,
-        flashcard_configs: flashcardConfigs,
       });
 
       await saveOutputFields(
