@@ -76,7 +76,7 @@ export function MeaningTreeCard({ meaning, word, meaningIndex, totalMeanings }: 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await saveConceptsFromMeaning(nodes, word, selectedNames, conceptLink || undefined);
+      await saveConceptsFromMeaning(nodes, word, selectedNames, conceptLink || undefined, contextDefinition || undefined);
     } finally {
       setIsSaving(false);
     }

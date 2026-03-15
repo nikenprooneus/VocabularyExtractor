@@ -10,6 +10,7 @@ const mapRow = (row: Record<string, unknown>): Concept => ({
   parentId: (row.parent_id as string) ?? null,
   nodeType: (row.node_type as 'concept' | 'word') ?? 'concept',
   conceptLink: (row.concept_link as string) ?? null,
+  contextDefinition: (row.context_definition as string) ?? null,
   createdAt: row.created_at as string,
 });
 
@@ -55,7 +56,8 @@ export const insertConcept = async (
   name: string,
   parentId: string | null,
   nodeType: 'concept' | 'word' = 'concept',
-  conceptLink?: string | null
+  conceptLink?: string | null,
+  contextDefinition?: string | null
 ): Promise<Concept> => {
   const { data, error } = await supabase
     .from('concepts')
@@ -65,6 +67,7 @@ export const insertConcept = async (
       parent_id: parentId ?? null,
       node_type: nodeType,
       concept_link: conceptLink ?? null,
+      context_definition: contextDefinition ?? null,
     })
     .select()
     .single();

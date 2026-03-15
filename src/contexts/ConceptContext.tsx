@@ -58,7 +58,8 @@ export function ConceptProvider({ children }: { children: ReactNode }) {
       nodes: ConceptTreeNode[],
       wordName: string,
       selectedNames: Set<string>,
-      conceptLink?: string
+      conceptLink?: string,
+      contextDefinition?: string
     ) => {
       if (!user) return;
 
@@ -111,7 +112,7 @@ export function ConceptProvider({ children }: { children: ReactNode }) {
 
       if (!existingWord) {
         try {
-          await insertConcept(user.id, normalizedWord, wordParentId, 'word', link);
+          await insertConcept(user.id, normalizedWord, wordParentId, 'word', link, contextDefinition ?? null);
           savedCount++;
         } catch {
           const found = await findConceptByNameAndType(user.id, normalizedWord, 'word', wordParentId);

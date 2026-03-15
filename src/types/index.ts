@@ -97,6 +97,7 @@ export interface Concept {
   parentId: string | null;
   nodeType: 'concept' | 'word';
   conceptLink?: string | null;
+  contextDefinition?: string | null;
   createdAt: string;
 }
 
@@ -121,7 +122,8 @@ export interface ConceptContextType {
     nodes: ConceptTreeNode[],
     wordName: string,
     selectedNames: Set<string>,
-    conceptLink?: string
+    conceptLink?: string,
+    contextDefinition?: string
   ) => Promise<void>;
 }
 
