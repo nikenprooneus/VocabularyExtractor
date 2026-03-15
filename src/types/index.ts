@@ -213,3 +213,62 @@ export interface AuthContextType {
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
+
+// ─── Knowledge Graph Types ────────────────────────────────────────────────────
+
+export type GraphNodeType = 'concept' | 'word' | 'tmrnd';
+export type TmrndSubType = 'tone' | 'mode' | 'nuance' | 'register' | 'dialect';
+
+export interface WordGraphPayload {
+  wordId: string;
+  word: string;
+  example: string;
+  note: GeneratedResult;
+  toneId: string | null;
+  dialectId: string | null;
+  modeId: string | null;
+  nuanceId: string | null;
+  registerId: string | null;
+  conceptId: string | null;
+  wordLinkId: string | null;
+  wordLinkName: string | null;
+  contextDefinition: string | null;
+}
+
+export interface GraphNode {
+  id: string;
+  label: string;
+  type: GraphNodeType;
+  tmrndSubType?: TmrndSubType;
+  payload?: WordGraphPayload;
+  x?: number;
+  y?: number;
+  vx?: number;
+  vy?: number;
+  fx?: number | null;
+  fy?: number | null;
+}
+
+export type GraphLinkType = 'concept-concept' | 'word-concept' | 'word-tmrnd';
+
+export interface GraphLink {
+  source: string;
+  target: string;
+  label?: string;
+  linkType: GraphLinkType;
+}
+
+export interface GraphData {
+  nodes: GraphNode[];
+  links: GraphLink[];
+}
+
+export interface GraphFilters {
+  conceptText: string;
+  wordText: string;
+  toneId: string;
+  dialectId: string;
+  modeId: string;
+  nuanceId: string;
+  registerId: string;
+}
