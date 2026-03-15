@@ -95,6 +95,8 @@ export interface Concept {
   userId: string;
   name: string;
   parentId: string | null;
+  nodeType: 'concept' | 'word';
+  conceptLink?: string | null;
   createdAt: string;
 }
 
@@ -108,6 +110,7 @@ export interface ConceptTreeNode {
   name: string;
   status: ConceptNodeStatus;
   tier: 'word' | 1 | 2 | 3;
+  conceptLink?: string;
 }
 
 export interface ConceptContextType {
@@ -117,7 +120,8 @@ export interface ConceptContextType {
   saveConceptsFromMeaning: (
     nodes: ConceptTreeNode[],
     wordName: string,
-    selectedNames: Set<string>
+    selectedNames: Set<string>,
+    conceptLink?: string
   ) => Promise<void>;
 }
 

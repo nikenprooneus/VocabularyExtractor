@@ -1,6 +1,11 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Concept, ConceptContextType, ConceptTreeNode } from '../types';
-import { fetchUserConcepts, insertConcept, updateConceptParent } from '../services/conceptService';
+import {
+  fetchUserConcepts,
+  findConceptByNameAndType,
+  insertConcept,
+  updateConceptParent,
+} from '../services/conceptService';
 import { useAuth } from './AuthContext';
 import toast from 'react-hot-toast';
 
@@ -12,14 +17,18 @@ function buildConceptBank(concepts: Concept[]): string {
   const byId = new Map<string, Concept>(concepts.map((c) => [c.id, c]));
 
   const getAncestry = (concept: Concept): string => {
-    const path: string[] = [concept.name];
-    let current = concept;
-    while (current.parentId) {
-      const parent = byId.get(current.parentId);
-      if (!parent) break;
-      path.unshift(parent.name);
-      current = parent;
+    const path: string[] = [];
+    let current: Concept | undefined = concept;
+
+    while (current) {
+      if (current.nodeType === 'word' && current.conceptLink) {
+        path.unshift(`[${current.conceptLink}] ${current.name}`);
+      } else {
+        path.unshift(current.name);
+      }
+      current = current.parentId ? byId.get(current.parentId) : undefined;
     }
+
     return path.join(' > ');
   };
 
@@ -45,73 +54,80 @@ export function ConceptProvider({ children }: { children: ReactNode }) {
   }, [user, refreshConcepts]);
 
   const saveConceptsFromMeaning = useCallback(
-    async (nodes: ConceptTreeNode[], wordName: string, selectedNames: Set<string>) => {
+    async (
+      nodes: ConceptTreeNode[],
+      wordName: string,
+      selectedNames: Set<string>,
+      conceptLink?: string
+    ) => {
       if (!user) return;
 
       const normalizeStr = (s: string) => s.toLowerCase().trim();
-      const allNodes = [...nodes, { name: wordName, status: 'EXISTING' as const, tier: 'word' as const }];
-
-      const currentConcepts = await fetchUserConcepts(user.id);
-      const byName = new Map<string, Concept>(
-        currentConcepts.map((c) => [normalizeStr(c.name), c])
-      );
-
       let savedCount = 0;
       let existingCount = 0;
       const resolvedIds = new Map<string, string>();
 
-      for (const node of allNodes) {
+      for (const node of nodes) {
         const normalizedName = normalizeStr(node.name);
-        const isWord = node.tier === 'word';
-        const isSelected = selectedNames.has(node.name) || isWord;
+        const isSelected = selectedNames.has(node.name);
 
-        const existing = byName.get(normalizedName);
+        const parentNode = nodes[nodes.indexOf(node) - 1];
+        const parentNorm = parentNode ? normalizeStr(parentNode.name) : null;
+        const resolvedParentId = parentNorm ? (resolvedIds.get(parentNorm) ?? null) : null;
+
+        const existing = await findConceptByNameAndType(user.id, normalizedName, 'concept');
 
         if (existing) {
           resolvedIds.set(normalizedName, existing.id);
           existingCount++;
 
-          const parentNode = allNodes[allNodes.indexOf(node) - 1];
-          if (existing.parentId === null && parentNode) {
-            const parentNorm = normalizeStr(parentNode.name);
-            const resolvedParentId = resolvedIds.get(parentNorm);
-            if (resolvedParentId) {
-              await updateConceptParent(existing.id, resolvedParentId);
-            }
+          if (existing.parentId === null && resolvedParentId) {
+            await updateConceptParent(existing.id, resolvedParentId);
           }
           continue;
         }
 
         if (!isSelected) continue;
 
-        const parentNode = allNodes[allNodes.indexOf(node) - 1];
-        let parentId: string | null = null;
-        if (parentNode) {
-          const parentNorm = normalizeStr(parentNode.name);
-          parentId = resolvedIds.get(parentNorm) ?? null;
-        }
-
         try {
-          const created = await insertConcept(user.id, normalizedName, parentId);
+          const created = await insertConcept(user.id, normalizedName, resolvedParentId, 'concept');
           resolvedIds.set(normalizedName, created.id);
-          byName.set(normalizedName, created);
           savedCount++;
         } catch {
-          // Concept may have been inserted by a race condition; try to look it up
-          const fresh = await fetchUserConcepts(user.id);
-          const found = fresh.find((c) => normalizeStr(c.name) === normalizedName);
+          const found = await findConceptByNameAndType(user.id, normalizedName, 'concept');
           if (found) {
             resolvedIds.set(normalizedName, found.id);
-            byName.set(normalizedName, found);
           }
         }
+      }
+
+      const lastConceptNode = nodes[nodes.length - 1];
+      const wordParentNorm = lastConceptNode ? normalizeStr(lastConceptNode.name) : null;
+      const wordParentId = wordParentNorm ? (resolvedIds.get(wordParentNorm) ?? null) : null;
+      const normalizedWord = normalizeStr(wordName);
+      const link = conceptLink?.trim() || null;
+
+      const existingWord = await findConceptByNameAndType(user.id, normalizedWord, 'word', wordParentId);
+
+      if (!existingWord) {
+        try {
+          await insertConcept(user.id, normalizedWord, wordParentId, 'word', link);
+          savedCount++;
+        } catch {
+          const found = await findConceptByNameAndType(user.id, normalizedWord, 'word', wordParentId);
+          if (!found) {
+            console.error('Failed to insert word node for', normalizedWord);
+          }
+        }
+      } else {
+        existingCount++;
       }
 
       await refreshConcepts();
 
       if (savedCount > 0) {
         toast.success(
-          `Saved ${savedCount} new concept${savedCount !== 1 ? 's' : ''}` +
+          `Saved ${savedCount} new node${savedCount !== 1 ? 's' : ''}` +
             (existingCount > 0 ? ` (${existingCount} already existed)` : '')
         );
       } else {
