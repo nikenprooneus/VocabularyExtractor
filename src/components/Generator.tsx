@@ -23,6 +23,7 @@ export function Generator({ settings, isLoading: settingsLoading = false }: Gene
   const [example, setExample] = useState('');
   const [results, setResults] = useState<GeneratedResult | null>(null);
   const [parsedMeanings, setParsedMeanings] = useState<ParsedMeaning[] | null>(null);
+  const [conceptTreeRawOutput, setConceptTreeRawOutput] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -31,6 +32,8 @@ export function Generator({ settings, isLoading: settingsLoading = false }: Gene
   const isLLMConfigured = !!(settings.apiKey && settings.baseUrl && settings.outputFields.length > 0);
   const hasFlashcardConfig = settings.flashcardConfigs.length > 0;
   const isSettingsConfigured = isLLMConfigured && hasFlashcardConfig;
+
+  const apiConfig = { apiKey: settings.apiKey, baseUrl: settings.baseUrl, model: settings.model };
 
   const handleGenerate = async () => {
     if (!word.trim()) {
@@ -45,22 +48,35 @@ export function Generator({ settings, isLoading: settingsLoading = false }: Gene
 
     setIsLoading(true);
     try {
-      const promptWithBank = settings.promptTemplate.replace(
-        /\{\{Concept Bank\}\}/gi,
-        conceptBank
-      );
-      const result = await generateVocabulary(
-        word,
-        example,
-        promptWithBank,
-        settings.outputFields,
-        { apiKey: settings.apiKey, baseUrl: settings.baseUrl, model: settings.model },
-      );
-      setResults(result);
-      if (result.rawOutput) {
-        const meanings = parsePolysemicMarkerTags(result.rawOutput, settings.outputFields);
+      const hasCtConfig =
+        settings.conceptTreePromptTemplate.trim().length > 0 &&
+        settings.conceptTreeOutputFields.length > 0;
+
+      const ctPrompt = hasCtConfig
+        ? settings.conceptTreePromptTemplate
+            .replace(/\{\{Concept Bank\}\}/gi, conceptBank)
+        : null;
+
+      const calls: [Promise<GeneratedResult>, Promise<GeneratedResult | null>] = [
+        generateVocabulary(word, example, settings.promptTemplate, settings.outputFields, apiConfig),
+        ctPrompt
+          ? generateVocabulary(word, example, ctPrompt, settings.conceptTreeOutputFields, apiConfig)
+          : Promise.resolve(null),
+      ];
+
+      const [tmrndResult, ctResult] = await Promise.all(calls);
+
+      setResults(tmrndResult);
+
+      if (ctResult && ctResult.rawOutput) {
+        const meanings = parsePolysemicMarkerTags(ctResult.rawOutput, settings.conceptTreeOutputFields);
         setParsedMeanings(meanings);
+        setConceptTreeRawOutput(ctResult.rawOutput);
+      } else {
+        setParsedMeanings(null);
+        setConceptTreeRawOutput(undefined);
       }
+
       toast.success('Vocabulary extracted successfully!');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to generate vocabulary';
@@ -75,12 +91,10 @@ export function Generator({ settings, isLoading: settingsLoading = false }: Gene
       toast.error('Webhook URL not configured');
       return;
     }
-
     if (!results) {
       toast.error('No results to export');
       return;
     }
-
     setIsExporting(true);
     try {
       await exportToWebhook(word, example, results, settings.webhookUrl);
@@ -94,16 +108,8 @@ export function Generator({ settings, isLoading: settingsLoading = false }: Gene
   };
 
   const handleSaveToHistory = async () => {
-    if (!user) {
-      toast.error('User not authenticated');
-      return;
-    }
-
-    if (!results) {
-      toast.error('No results to save');
-      return;
-    }
-
+    if (!user) { toast.error('User not authenticated'); return; }
+    if (!results) { toast.error('No results to save'); return; }
     setIsSaving(true);
     try {
       await saveVocabularyEntry(user.id, word, example, results);
@@ -120,6 +126,7 @@ export function Generator({ settings, isLoading: settingsLoading = false }: Gene
     setExample('');
     setResults(null);
     setParsedMeanings(null);
+    setConceptTreeRawOutput(undefined);
   };
 
   const handleCopyRawOutput = () => {
@@ -171,6 +178,7 @@ export function Generator({ settings, isLoading: settingsLoading = false }: Gene
             onCopyRawOutput={handleCopyRawOutput}
             parsedMeanings={parsedMeanings}
             word={word}
+            conceptTreeRawOutput={conceptTreeRawOutput}
           />
 
           <ActionButtons

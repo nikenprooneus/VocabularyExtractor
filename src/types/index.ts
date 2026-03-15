@@ -20,6 +20,8 @@ export interface Settings {
   promptTemplate: string;
   webhookUrl: string;
   flashcardConfigs: FlashcardConfig[];
+  conceptTreePromptTemplate: string;
+  conceptTreeOutputFields: OutputField[];
 }
 
 export interface GeneratedResult {
@@ -55,6 +57,8 @@ export interface DatabaseSettings {
   model: string;
   prompt_template: string;
   webhook_url: string;
+  concept_tree_prompt_template: string;
+  concept_tree_output_fields: OutputField[];
   created_at: string;
   updated_at: string;
 }

@@ -12,6 +12,8 @@ const DEFAULT_SETTINGS: Settings = {
   promptTemplate: 'Define the word "{{Word}}" in detail, including pronunciation, parts of speech, meanings, and usage notes.',
   webhookUrl: '',
   flashcardConfigs: [],
+  conceptTreePromptTemplate: '',
+  conceptTreeOutputFields: [],
 };
 
 interface SettingsContextType {
@@ -67,6 +69,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           promptTemplate: dbSettings.prompt_template,
           webhookUrl: dbSettings.webhook_url,
           flashcardConfigs,
+          conceptTreePromptTemplate: dbSettings.concept_tree_prompt_template ?? '',
+          conceptTreeOutputFields: Array.isArray(dbSettings.concept_tree_output_fields)
+            ? dbSettings.concept_tree_output_fields
+            : [],
         });
       } else {
         setSettings((prev) => ({ ...prev, outputFields, flashcardConfigs }));
@@ -88,6 +94,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         model: newSettings.model,
         prompt_template: newSettings.promptTemplate,
         webhook_url: newSettings.webhookUrl,
+        concept_tree_prompt_template: newSettings.conceptTreePromptTemplate,
+        concept_tree_output_fields: newSettings.conceptTreeOutputFields,
       });
 
       const outputFieldsToSave = newSettings.outputFields.map((field, index) => ({

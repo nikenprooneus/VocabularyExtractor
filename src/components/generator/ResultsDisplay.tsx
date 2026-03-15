@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Copy, ChevronDown, ChevronUp } from 'lucide-react';
 import { Settings as SettingsType, GeneratedResult, ParsedMeaning } from '../../types/index';
 import { FlashcardItem } from '../FlashcardItem';
@@ -11,6 +12,7 @@ interface ResultsDisplayProps {
   onCopyRawOutput: () => void;
   parsedMeanings?: ParsedMeaning[] | null;
   word?: string;
+  conceptTreeRawOutput?: string;
 }
 
 export function ResultsDisplay({
@@ -21,7 +23,10 @@ export function ResultsDisplay({
   onCopyRawOutput,
   parsedMeanings,
   word,
+  conceptTreeRawOutput,
 }: ResultsDisplayProps) {
+  const hasBothOutputs = !!(results.rawOutput && conceptTreeRawOutput);
+
   return (
     <>
       {results['Definition'] && (
@@ -77,7 +82,21 @@ export function ResultsDisplay({
         <ConceptTreesSection parsedMeanings={parsedMeanings} word={word} />
       )}
 
-      {results.rawOutput && (
+      {hasBothOutputs ? (
+        <div className="bg-white rounded-lg shadow p-6 space-y-3">
+          <h2 className="text-lg font-semibold text-gray-900">Full AI Analysis</h2>
+          <RawOutputPanel
+            label="TMRND Analysis"
+            rawOutput={results.rawOutput!}
+            onCopy={() => navigator.clipboard.writeText(results.rawOutput!)}
+          />
+          <RawOutputPanel
+            label="Concept Tree Analysis"
+            rawOutput={conceptTreeRawOutput!}
+            onCopy={() => navigator.clipboard.writeText(conceptTreeRawOutput!)}
+          />
+        </div>
+      ) : results.rawOutput ? (
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Full AI Analysis</h2>
@@ -116,7 +135,58 @@ export function ResultsDisplay({
             </div>
           )}
         </div>
-      )}
+      ) : null}
     </>
+  );
+}
+
+interface RawOutputPanelProps {
+  label: string;
+  rawOutput: string;
+  onCopy: () => void;
+}
+
+function RawOutputPanel({ label, rawOutput, onCopy }: RawOutputPanelProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 bg-gray-50">
+        <span className="text-sm font-medium text-gray-700">{label}</span>
+        <div className="flex gap-2">
+          <button
+            onClick={onCopy}
+            className="text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1 text-xs"
+            title={`Copy ${label}`}
+          >
+            <Copy size={14} />
+            Copy
+          </button>
+          <button
+            onClick={() => setOpen(v => !v)}
+            className="text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1 text-xs"
+          >
+            {open ? (
+              <>
+                <ChevronUp size={14} />
+                Hide
+              </>
+            ) : (
+              <>
+                <ChevronDown size={14} />
+                Show
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+      {open && (
+        <div className="bg-white p-4 max-h-72 overflow-y-auto border-t border-gray-200">
+          <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">
+            {rawOutput}
+          </pre>
+        </div>
+      )}
+    </div>
   );
 }

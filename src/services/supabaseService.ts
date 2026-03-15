@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { DatabaseSettings, DatabaseFlashcardConfig, FlashcardConfig, OutputFieldDB, VocabularyEntry, GeneratedResult, UserProfile } from '../types';
+import { DatabaseSettings, DatabaseFlashcardConfig, FlashcardConfig, OutputField, OutputFieldDB, VocabularyEntry, GeneratedResult, UserProfile } from '../types';
 
 export const fetchUserSettings = async (userId: string): Promise<DatabaseSettings | null> => {
   const { data, error } = await supabase
@@ -20,6 +20,8 @@ export const upsertUserSettings = async (
     model: string;
     prompt_template: string;
     webhook_url: string;
+    concept_tree_prompt_template: string;
+    concept_tree_output_fields: OutputField[];
   }
 ): Promise<DatabaseSettings> => {
   const { data, error } = await supabase

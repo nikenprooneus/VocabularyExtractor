@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader, LayoutList, BrainCircuit, Share2 } from 'lucide-react';
+import { Loader, LayoutList, BrainCircuit, Share2, GitBranch } from 'lucide-react';
 import { Settings as SettingsType, OutputField, FlashcardConfig } from '../types/index';
 import { testConnection } from '../services/apiService';
 import { saveOutputFields, upsertFlashcardConfig, deleteFlashcardConfig } from '../services/supabaseService';
@@ -23,6 +23,7 @@ interface SettingsProps {
 export function Settings({ settings, onSave, isLoading }: SettingsProps) {
   const { user } = useAuth();
   const { syncFlashcardConfigs, updateSettings } = useSettings();
+
   const [apiKey, setApiKey] = useState(settings.apiKey);
   const [baseUrl, setBaseUrl] = useState(settings.baseUrl);
   const [model, setModel] = useState(settings.model);
@@ -31,26 +32,41 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
   const [promptTemplate, setPromptTemplate] = useState(settings.promptTemplate);
   const [webhookUrl, setWebhookUrl] = useState(settings.webhookUrl);
   const [flashcardConfigs, setFlashcardConfigs] = useState<FlashcardConfig[]>(settings.flashcardConfigs || []);
+
+  const [conceptTreePromptTemplate, setConceptTreePromptTemplate] = useState(settings.conceptTreePromptTemplate || '');
+  const [conceptTreeOutputFields, setConceptTreeOutputFields] = useState<OutputField[]>(settings.conceptTreeOutputFields || []);
+  const [newCtFieldName, setNewCtFieldName] = useState('');
+
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'TMRND' | 'AI' | 'Export'>('TMRND');
+  const [activeTab, setActiveTab] = useState<'TMRND' | 'ConceptTree' | 'AI' | 'Export'>('TMRND');
 
   const tabs = [
     { key: 'TMRND' as const, label: 'TMRND', icon: LayoutList },
+    { key: 'ConceptTree' as const, label: 'Concept Tree', icon: GitBranch },
     { key: 'AI' as const, label: 'AI', icon: BrainCircuit },
     { key: 'Export' as const, label: 'Export', icon: Share2 },
   ];
 
+  useEffect(() => {
+    setApiKey(settings.apiKey);
+    setBaseUrl(settings.baseUrl);
+    setModel(settings.model);
+    setPromptTemplate(settings.promptTemplate);
+    setWebhookUrl(settings.webhookUrl || '');
+    setOutputFields(settings.outputFields);
+    setFlashcardConfigs(settings.flashcardConfigs || []);
+    setConceptTreePromptTemplate(settings.conceptTreePromptTemplate || '');
+    setConceptTreeOutputFields(settings.conceptTreeOutputFields || []);
+  }, [settings]);
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-
     if (over && active.id !== over.id) {
       const oldIndex = outputFields.findIndex((field) => field.id === active.id);
       const newIndex = outputFields.findIndex((field) => field.id === over.id);
-
       const reorderedFields = arrayMove(outputFields, oldIndex, newIndex);
       setOutputFields(reorderedFields);
-
       if (user) {
         try {
           await saveOutputFields(
@@ -70,30 +86,10 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
     }
   };
 
-  useEffect(() => {
-    setApiKey(settings.apiKey);
-    setBaseUrl(settings.baseUrl);
-    setModel(settings.model);
-    setPromptTemplate(settings.promptTemplate);
-    setWebhookUrl(settings.webhookUrl || '');
-    setOutputFields(settings.outputFields);
-    setFlashcardConfigs(settings.flashcardConfigs || []);
-  }, [settings]);
-
   const handleAddField = () => {
-    if (!newFieldName.trim()) {
-      toast.error('Field name cannot be empty');
-      return;
-    }
-    if (outputFields.some((f) => f.name === newFieldName.trim())) {
-      toast.error('Field already exists');
-      return;
-    }
-    const newField: OutputField = {
-      id: crypto.randomUUID(),
-      name: newFieldName.trim(),
-    };
-    setOutputFields([...outputFields, newField]);
+    if (!newFieldName.trim()) { toast.error('Field name cannot be empty'); return; }
+    if (outputFields.some((f) => f.name === newFieldName.trim())) { toast.error('Field already exists'); return; }
+    setOutputFields([...outputFields, { id: crypto.randomUUID(), name: newFieldName.trim() }]);
     setNewFieldName('');
   };
 
@@ -106,21 +102,37 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
     setOutputFields(outputFields.filter((f) => f.id !== id));
   };
 
+  const handleCtDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = conceptTreeOutputFields.findIndex((f) => f.id === active.id);
+      const newIndex = conceptTreeOutputFields.findIndex((f) => f.id === over.id);
+      setConceptTreeOutputFields(arrayMove(conceptTreeOutputFields, oldIndex, newIndex));
+    }
+  };
+
+  const handleAddCtField = () => {
+    if (!newCtFieldName.trim()) { toast.error('Field name cannot be empty'); return; }
+    if (conceptTreeOutputFields.some((f) => f.name === newCtFieldName.trim())) { toast.error('Field already exists'); return; }
+    setConceptTreeOutputFields([...conceptTreeOutputFields, { id: crypto.randomUUID(), name: newCtFieldName.trim() }]);
+    setNewCtFieldName('');
+  };
+
+  const handleRemoveCtField = (id: string) => {
+    setConceptTreeOutputFields(conceptTreeOutputFields.filter((f) => f.id !== id));
+  };
+
   const getAvailableFields = () => {
     const assignedFieldIds = new Set<string>();
     flashcardConfigs.forEach(config => {
       if (config.frontFieldId) assignedFieldIds.add(config.frontFieldId);
       config.backFieldIds.forEach(id => assignedFieldIds.add(id));
     });
-
-    return outputFields.filter(field =>
-      field.name !== 'Definition' && !assignedFieldIds.has(field.id)
-    );
+    return outputFields.filter(field => field.name !== 'Definition' && !assignedFieldIds.has(field.id));
   };
 
   const handleAddCard = async () => {
     if (!user) return;
-
     const newCard: FlashcardConfig = {
       id: crypto.randomUUID(),
       cardOrder: flashcardConfigs.length,
@@ -129,7 +141,6 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
     };
     const newConfigs = [...flashcardConfigs, newCard];
     setFlashcardConfigs(newConfigs);
-
     try {
       await upsertFlashcardConfig(user.id, newCard);
       syncFlashcardConfigs(newConfigs);
@@ -142,10 +153,8 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
 
   const handleDeleteCard = async (cardId: string) => {
     if (!user) return;
-
     const newConfigs = flashcardConfigs.filter(c => c.id !== cardId);
     setFlashcardConfigs(newConfigs);
-
     try {
       await deleteFlashcardConfig(cardId);
       syncFlashcardConfigs(newConfigs);
@@ -158,17 +167,13 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
 
   const handleRemoveFieldFromCard = async (cardId: string, fieldId: string, location: 'front' | 'back') => {
     if (!user) return;
-
     const updatedCard = flashcardConfigs.find(c => c.id === cardId);
     if (!updatedCard) return;
-
     const newCard: FlashcardConfig = location === 'front'
       ? { ...updatedCard, frontFieldId: '' }
       : { ...updatedCard, backFieldIds: updatedCard.backFieldIds.filter(id => id !== fieldId) };
-
     const newConfigs = flashcardConfigs.map(c => c.id === cardId ? newCard : c);
     setFlashcardConfigs(newConfigs);
-
     try {
       await upsertFlashcardConfig(user.id, newCard);
       syncFlashcardConfigs(newConfigs);
@@ -181,14 +186,11 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
 
   const handleFrontFieldChange = async (cardId: string, newFieldId: string) => {
     if (!user) return;
-
     const updatedCard = flashcardConfigs.find(c => c.id === cardId);
     if (!updatedCard) return;
-
     const newCard: FlashcardConfig = { ...updatedCard, frontFieldId: newFieldId };
     const newConfigs = flashcardConfigs.map(c => c.id === cardId ? newCard : c);
     setFlashcardConfigs(newConfigs);
-
     try {
       await upsertFlashcardConfig(user.id, newCard);
       syncFlashcardConfigs(newConfigs);
@@ -201,14 +203,11 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
 
   const handleBackFieldAdd = async (cardId: string, newFieldId: string) => {
     if (!newFieldId || !user) return;
-
     const updatedCard = flashcardConfigs.find(c => c.id === cardId);
     if (!updatedCard) return;
-
     const newCard: FlashcardConfig = { ...updatedCard, backFieldIds: [...updatedCard.backFieldIds, newFieldId] };
     const newConfigs = flashcardConfigs.map(c => c.id === cardId ? newCard : c);
     setFlashcardConfigs(newConfigs);
-
     try {
       await upsertFlashcardConfig(user.id, newCard);
       syncFlashcardConfigs(newConfigs);
@@ -220,15 +219,8 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
   };
 
   const handleTestConnection = async () => {
-    if (!apiKey.trim()) {
-      toast.error('API Key is required');
-      return;
-    }
-    if (!baseUrl.trim()) {
-      toast.error('Base URL is required');
-      return;
-    }
-
+    if (!apiKey.trim()) { toast.error('API Key is required'); return; }
+    if (!baseUrl.trim()) { toast.error('Base URL is required'); return; }
     setIsTestingConnection(true);
     try {
       const success = await testConnection({ apiKey, baseUrl, model });
@@ -245,18 +237,9 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
   };
 
   const handleSave = async () => {
-    if (!apiKey.trim()) {
-      toast.error('API Key is required');
-      return;
-    }
-    if (!baseUrl.trim()) {
-      toast.error('Base URL is required');
-      return;
-    }
-    if (outputFields.length === 0) {
-      toast.error('At least one output field is required');
-      return;
-    }
+    if (!apiKey.trim()) { toast.error('API Key is required'); return; }
+    if (!baseUrl.trim()) { toast.error('Base URL is required'); return; }
+    if (outputFields.length === 0) { toast.error('At least one output field is required'); return; }
 
     setIsSaving(true);
     try {
@@ -268,6 +251,8 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
         promptTemplate,
         webhookUrl,
         flashcardConfigs,
+        conceptTreePromptTemplate,
+        conceptTreeOutputFields,
       };
       await updateSettings(updatedSettings);
       onSave(updatedSettings);
@@ -292,7 +277,7 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
   return (
     <div className="flex flex-col md:flex-row gap-8 items-start">
       <nav className="w-full md:w-56 shrink-0">
-        <ul className="flex flex-row md:flex-col gap-1">
+        <ul className="flex flex-row md:flex-col gap-1 flex-wrap">
           {tabs.map(({ key, label, icon: Icon }) => {
             const isActive = activeTab === key;
             return (
@@ -329,6 +314,7 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
             <PromptTemplateSection
               promptTemplate={promptTemplate}
               onPromptTemplateChange={setPromptTemplate}
+              mode="tmrnd"
             />
 
             <FlashcardBuilderSection
@@ -340,6 +326,31 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
               onFrontFieldChange={handleFrontFieldChange}
               onBackFieldAdd={handleBackFieldAdd}
               onRemoveFieldFromCard={handleRemoveFieldFromCard}
+            />
+          </>
+        )}
+
+        {activeTab === 'ConceptTree' && (
+          <>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+              <p className="text-sm text-slate-700">
+                <span className="font-semibold">Concept Tree Configuration</span> — These settings drive the Concept Tree analysis exclusively. Add fields like <code className="bg-white border border-slate-200 px-1 rounded text-xs">Tier1</code>, <code className="bg-white border border-slate-200 px-1 rounded text-xs">Tier2</code>, <code className="bg-white border border-slate-200 px-1 rounded text-xs">Tier3</code> and write a dedicated prompt. When you click Generate, this runs as a separate parallel API call — keeping your TMRND prompt lean and focused.
+              </p>
+            </div>
+
+            <OutputFieldsSection
+              outputFields={conceptTreeOutputFields}
+              newFieldName={newCtFieldName}
+              onNewFieldNameChange={setNewCtFieldName}
+              onAddField={handleAddCtField}
+              onRemoveField={handleRemoveCtField}
+              onDragEnd={handleCtDragEnd}
+            />
+
+            <PromptTemplateSection
+              promptTemplate={conceptTreePromptTemplate}
+              onPromptTemplateChange={setConceptTreePromptTemplate}
+              mode="concepttree"
             />
           </>
         )}
