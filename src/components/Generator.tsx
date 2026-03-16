@@ -4,7 +4,7 @@ import { generateVocabulary } from '../services/apiService';
 import { exportToWebhook } from '../services/exportService';
 import { upsertWord, fetchWordsByTerm, fetchLookupTables, reconstructParsedMeaning } from '../services/supabaseService';
 import { supabase } from '../lib/supabase';
-import { resolveAllLookupIds } from '../services/lookupService';
+import { resolveAllLookupIds, rehydrateNoteWithLookupNames } from '../services/lookupService';
 import { useAuth } from '../contexts/AuthContext';
 import { useConceptContext } from '../contexts/ConceptContext';
 import { parseSingleMeaning } from '../utils/parsingUtils';
@@ -104,7 +104,16 @@ export function Generator({ settings, isLoading: settingsLoading = false }: Gene
         );
 
         if (exactMatch) {
-          setResults(exactMatch.note);
+          const lookups = await fetchLookupTables();
+          const ids = {
+            toneId: exactMatch.toneId,
+            dialectId: exactMatch.dialectId,
+            modeId: exactMatch.modeId,
+            nuanceId: exactMatch.nuanceId,
+            registerId: exactMatch.registerId,
+          };
+          const rehydratedNote = rehydrateNoteWithLookupNames(exactMatch.note as Record<string, unknown>, ids, lookups);
+          setResults(rehydratedNote as typeof exactMatch.note);
           setConceptTreeRawOutput(undefined);
           const rebuilt = await reconstructParsedMeaning(
             exactMatch.conceptId,
@@ -162,7 +171,16 @@ export function Generator({ settings, isLoading: settingsLoading = false }: Gene
         if (error) throw error;
       }
 
-      setResults(existing.note);
+      const lookups = await fetchLookupTables();
+      const ids = {
+        toneId: existing.toneId,
+        dialectId: existing.dialectId,
+        modeId: existing.modeId,
+        nuanceId: existing.nuanceId,
+        registerId: existing.registerId,
+      };
+      const rehydratedNote = rehydrateNoteWithLookupNames(existing.note as Record<string, unknown>, ids, lookups);
+      setResults(rehydratedNote as typeof existing.note);
       setConceptTreeRawOutput(undefined);
       const rebuilt = await reconstructParsedMeaning(
         existing.conceptId,
