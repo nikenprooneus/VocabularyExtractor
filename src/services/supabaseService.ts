@@ -18,6 +18,9 @@ export const upsertUserSettings = async (
     api_key: string;
     base_url: string;
     model: string;
+    llm_provider: string;
+    temperature: number;
+    llm_max_tokens: number;
     prompt_template: string;
     webhook_url: string;
     concept_tree_prompt_template: string;

@@ -1,13 +1,16 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Settings, OutputField, FlashcardConfig } from '../types/index';
+import { Settings, OutputField, FlashcardConfig, LLMProvider } from '../types/index';
 import { useAuth } from './AuthContext';
 import { fetchUserSettings, upsertUserSettings, fetchOutputFields, saveOutputFields, fetchFlashcardConfigs } from '../services/supabaseService';
 import toast from 'react-hot-toast';
 
 const DEFAULT_SETTINGS: Settings = {
   apiKey: '',
-  baseUrl: 'https://api.openai.com/v1',
-  model: 'gpt-3.5-turbo',
+  baseUrl: '',
+  model: 'gpt-4o',
+  llmProvider: 'openai' as LLMProvider,
+  temperature: 0.7,
+  llmMaxTokens: 2000,
   outputFields: [],
   promptTemplate: 'Define the word "{{Word}}" in detail, including pronunciation, parts of speech, meanings, and usage notes.',
   webhookUrl: '',
@@ -63,8 +66,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       if (dbSettings) {
         setSettings({
           apiKey: dbSettings.api_key,
-          baseUrl: dbSettings.base_url,
+          baseUrl: dbSettings.base_url ?? '',
           model: dbSettings.model,
+          llmProvider: (dbSettings.llm_provider as LLMProvider) ?? 'openai',
+          temperature: dbSettings.temperature ?? 0.7,
+          llmMaxTokens: dbSettings.llm_max_tokens ?? 2000,
           outputFields,
           promptTemplate: dbSettings.prompt_template,
           webhookUrl: dbSettings.webhook_url,
@@ -92,6 +98,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         api_key: newSettings.apiKey,
         base_url: newSettings.baseUrl,
         model: newSettings.model,
+        llm_provider: newSettings.llmProvider,
+        temperature: newSettings.temperature,
+        llm_max_tokens: newSettings.llmMaxTokens,
         prompt_template: newSettings.promptTemplate,
         webhook_url: newSettings.webhookUrl,
         concept_tree_prompt_template: newSettings.conceptTreePromptTemplate,

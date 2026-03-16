@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Loader, LayoutList, BrainCircuit, Share2, GitBranch } from 'lucide-react';
-import { Settings as SettingsType, OutputField, FlashcardConfig } from '../types/index';
+import { Settings as SettingsType, OutputField, FlashcardConfig, LLMProvider } from '../types/index';
 import { testConnection } from '../services/apiService';
 import { saveOutputFields, upsertFlashcardConfig, deleteFlashcardConfig } from '../services/supabaseService';
 import { useAuth } from '../contexts/AuthContext';
@@ -27,6 +27,9 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
   const [apiKey, setApiKey] = useState(settings.apiKey);
   const [baseUrl, setBaseUrl] = useState(settings.baseUrl);
   const [model, setModel] = useState(settings.model);
+  const [llmProvider, setLlmProvider] = useState<LLMProvider>(settings.llmProvider ?? 'openai');
+  const [temperature, setTemperature] = useState(settings.temperature ?? 0.7);
+  const [llmMaxTokens, setLlmMaxTokens] = useState(settings.llmMaxTokens ?? 2000);
   const [outputFields, setOutputFields] = useState<OutputField[]>(settings.outputFields);
   const [newFieldName, setNewFieldName] = useState('');
   const [promptTemplate, setPromptTemplate] = useState(settings.promptTemplate);
@@ -52,6 +55,9 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
     setApiKey(settings.apiKey);
     setBaseUrl(settings.baseUrl);
     setModel(settings.model);
+    setLlmProvider(settings.llmProvider ?? 'openai');
+    setTemperature(settings.temperature ?? 0.7);
+    setLlmMaxTokens(settings.llmMaxTokens ?? 2000);
     setPromptTemplate(settings.promptTemplate);
     setWebhookUrl(settings.webhookUrl || '');
     setOutputFields(settings.outputFields);
@@ -225,14 +231,21 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
 
   const handleTestConnection = async () => {
     if (!apiKey.trim()) { toast.error('API Key is required'); return; }
-    if (!baseUrl.trim()) { toast.error('Base URL is required'); return; }
+    if (llmProvider === 'custom' && !baseUrl.trim()) { toast.error('Base URL is required for Custom Proxy'); return; }
     setIsTestingConnection(true);
     try {
-      const success = await testConnection({ apiKey, baseUrl, model });
+      const success = await testConnection({
+        apiKey,
+        baseUrl,
+        model,
+        provider: llmProvider,
+        temperature,
+        maxTokens: llmMaxTokens,
+      });
       if (success) {
         toast.success('Connection successful!');
       } else {
-        toast.error('Connection failed. Check your API key and Base URL.');
+        toast.error('Connection failed. Check your API key and model.');
       }
     } catch {
       toast.error('Connection test failed. Please check your settings.');
@@ -243,7 +256,7 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
 
   const handleSave = async () => {
     if (!apiKey.trim()) { toast.error('API Key is required'); return; }
-    if (!baseUrl.trim()) { toast.error('Base URL is required'); return; }
+    if (llmProvider === 'custom' && !baseUrl.trim()) { toast.error('Base URL is required for Custom Proxy'); return; }
     if (outputFields.length === 0) { toast.error('At least one output field is required'); return; }
 
     setIsSaving(true);
@@ -252,6 +265,9 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
         apiKey,
         baseUrl,
         model,
+        llmProvider,
+        temperature,
+        llmMaxTokens,
         outputFields,
         promptTemplate,
         webhookUrl,
@@ -363,13 +379,19 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
 
         {activeTab === 'AI' && (
           <LLMConfigSection
+            provider={llmProvider}
             apiKey={apiKey}
             baseUrl={baseUrl}
             model={model}
+            temperature={temperature}
+            maxTokens={llmMaxTokens}
             isTestingConnection={isTestingConnection}
+            onProviderChange={setLlmProvider}
             onApiKeyChange={setApiKey}
             onBaseUrlChange={setBaseUrl}
             onModelChange={setModel}
+            onTemperatureChange={setTemperature}
+            onMaxTokensChange={setLlmMaxTokens}
             onTestConnection={handleTestConnection}
           />
         )}

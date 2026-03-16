@@ -41,11 +41,18 @@ export function Generator({ settings, isLoading: settingsLoading = false }: Gene
   const [disambiguationContexts, setDisambiguationContexts] = useState<WordWithContext[] | null>(null);
   const pendingConceptSelection = useRef<PendingConceptSelection | null>(null);
 
-  const isLLMConfigured = !!(settings.apiKey && settings.baseUrl && settings.outputFields.length > 0);
+  const isLLMConfigured = !!(settings.apiKey && settings.outputFields.length > 0);
   const hasFlashcardConfig = settings.flashcardConfigs.length > 0;
   const isSettingsConfigured = isLLMConfigured && hasFlashcardConfig;
 
-  const apiConfig = { apiKey: settings.apiKey, baseUrl: settings.baseUrl, model: settings.model };
+  const apiConfig = {
+    apiKey: settings.apiKey,
+    baseUrl: settings.baseUrl,
+    model: settings.model,
+    provider: settings.llmProvider ?? 'openai',
+    temperature: settings.temperature ?? 0.7,
+    maxTokens: settings.llmMaxTokens ?? 2000,
+  };
 
   const runApiCalls = async (wordVal: string, exampleVal: string): Promise<{ tmrndResult: GeneratedResult; ctMeaning: ParsedMeaning | null; ctRaw: string | undefined }> => {
     const hasCtConfig =
