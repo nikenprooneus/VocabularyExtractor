@@ -85,13 +85,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
       throw error;
+    }
+
+    if (data.session?.user) {
+      setSession(data.session);
+      const profile = await fetchUserProfile(data.session.user.id);
+      setUser(profile);
     }
 
     toast.success('Signed in successfully!');
