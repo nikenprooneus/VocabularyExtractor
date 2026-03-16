@@ -368,11 +368,6 @@ export function Generator({ settings, isLoading: settingsLoading = false }: Gene
         </>
       )}
 
-      {!results && !isLoading && (
-        <div className="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
-          <p className="text-gray-500">No results yet. Enter a word and click Generate to start.</p>
-        </div>
-      )}
     </div>
   );
 }

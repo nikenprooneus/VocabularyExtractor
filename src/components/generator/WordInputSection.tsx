@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { Loader, Zap, RotateCcw } from 'lucide-react';
 
 interface WordInputSectionProps {
@@ -23,6 +24,14 @@ export function WordInputSection({
   onClear,
   hasClearableContent,
 }: WordInputSectionProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleExampleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    e.target.style.height = 'auto';
+    e.target.style.height = `${e.target.scrollHeight}px`;
+    onExampleChange(e.target.value);
+  };
+
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 sm:p-6">
       <div className="space-y-4">
@@ -43,14 +52,17 @@ export function WordInputSection({
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Example Sentence <span className="text-slate-400 font-normal">(optional)</span>
+              Example Sentence <span className="text-red-500">*</span>
             </label>
             <textarea
+              ref={textareaRef}
               value={example}
-              onChange={(e) => onExampleChange(e.target.value)}
+              onChange={handleExampleChange}
               placeholder="e.g., Finding that old book in the library was pure serendipity."
-              rows={1}
+              rows={2}
+              required
               disabled={isLoading}
+              style={{ overflow: 'hidden' }}
               className="w-full bg-transparent border border-slate-200 rounded-md px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition disabled:opacity-50 disabled:cursor-not-allowed resize-none"
             />
           </div>
@@ -59,7 +71,7 @@ export function WordInputSection({
         <div className="flex flex-col sm:flex-row gap-2.5">
           <button
             onClick={onGenerate}
-            disabled={isLoading || !isSettingsConfigured}
+            disabled={isLoading || !isSettingsConfigured || !word.trim() || !example.trim()}
             className="w-full sm:w-auto flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-700 disabled:opacity-50 text-white py-2 px-5 rounded-md text-sm font-medium transition-all"
           >
             {isLoading ? (

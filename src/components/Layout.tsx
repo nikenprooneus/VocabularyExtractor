@@ -68,8 +68,8 @@ export default function Layout({ children }: LayoutProps) {
     <div className={isGraphPage ? 'h-screen flex flex-col bg-slate-950 overflow-hidden' : 'min-h-screen bg-slate-50'}>
       <header className={`sticky top-0 z-50 flex-shrink-0 ${isGraphPage ? 'bg-slate-900 border-b border-slate-700/60' : 'bg-white border-b border-slate-200'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14">
-            <div className="flex items-center gap-6">
+          <div className="flex items-center justify-between h-14 relative">
+            <div className="flex-shrink-0 flex items-center z-10">
               <div className="flex items-center gap-2.5">
                 <div className="w-7 h-7 bg-slate-900 rounded-md flex items-center justify-center flex-shrink-0">
                   <Zap className="w-4 h-4 text-white" />
@@ -78,8 +78,10 @@ export default function Layout({ children }: LayoutProps) {
                   Vocabulary Extractor
                 </span>
               </div>
+            </div>
 
-              <nav className="hidden md:flex items-center gap-1">
+            <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 pointer-events-none">
+              <nav className="flex items-center gap-1 pointer-events-auto">
                 <Link to="/" className={navLinkClass('/')}>Generator</Link>
                 <Link to="/knowledge-graph" className={`${navLinkClass('/knowledge-graph')} flex items-center gap-1.5`}>
                   <Network size={14} />
@@ -88,7 +90,7 @@ export default function Layout({ children }: LayoutProps) {
               </nav>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex-shrink-0 flex items-center gap-3 z-10">
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setDropdownOpen(v => !v)}
@@ -155,13 +157,15 @@ export default function Layout({ children }: LayoutProps) {
             </div>
           </div>
 
-          <nav className="md:hidden flex items-center gap-1 pb-2.5 overflow-x-auto">
-            <Link to="/" className={navLinkClass('/')}>Generator</Link>
-            <Link to="/knowledge-graph" className={`${navLinkClass('/knowledge-graph')} flex items-center gap-1.5`}>
-              <Network size={14} />
-              Knowledge Graph
-            </Link>
-          </nav>
+          <div className="md:hidden flex justify-center w-full pb-2.5">
+            <nav className="flex items-center gap-1 overflow-x-auto">
+              <Link to="/" className={navLinkClass('/')}>Generator</Link>
+              <Link to="/knowledge-graph" className={`${navLinkClass('/knowledge-graph')} flex items-center gap-1.5`}>
+                <Network size={14} />
+                Knowledge Graph
+              </Link>
+            </nav>
+          </div>
         </div>
       </header>
 
