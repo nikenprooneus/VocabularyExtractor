@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { Settings as SettingsType, GeneratedResult, ParsedMeaning, ConceptTreeNode, WordWithContext } from '../types/index';
 import { generateVocabulary } from '../services/apiService';
 import { exportToWebhook } from '../services/exportService';
-import { upsertWord, fetchWordsByTerm, fetchLookupTables } from '../services/supabaseService';
+import { upsertWord, fetchWordsByTerm, fetchLookupTables, reconstructParsedMeaning } from '../services/supabaseService';
 import { supabase } from '../lib/supabase';
 import { resolveAllLookupIds } from '../services/lookupService';
 import { useAuth } from '../contexts/AuthContext';
@@ -105,8 +105,13 @@ export function Generator({ settings, isLoading: settingsLoading = false }: Gene
 
         if (exactMatch) {
           setResults(exactMatch.note);
-          setParsedMeaning(null);
           setConceptTreeRawOutput(undefined);
+          const rebuilt = await reconstructParsedMeaning(
+            exactMatch.conceptId,
+            exactMatch.wordLinkId,
+            exactMatch.contextDefinition
+          );
+          setParsedMeaning(rebuilt);
           toast.success('Loaded from saved analysis!');
           setIsLoading(false);
           return;
@@ -158,8 +163,13 @@ export function Generator({ settings, isLoading: settingsLoading = false }: Gene
       }
 
       setResults(existing.note);
-      setParsedMeaning(null);
       setConceptTreeRawOutput(undefined);
+      const rebuilt = await reconstructParsedMeaning(
+        existing.conceptId,
+        existing.wordLinkId,
+        existing.contextDefinition
+      );
+      setParsedMeaning(rebuilt);
       toast.success('Context cloned successfully!');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to clone context';

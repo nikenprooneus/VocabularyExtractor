@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { DatabaseSettings, DatabaseFlashcardConfig, FlashcardConfig, OutputField, OutputFieldDB, GeneratedResult, UserProfile, Word, WordWithContext, LookupTables, ResolvedLookupIds } from '../types';
+import { DatabaseSettings, DatabaseFlashcardConfig, FlashcardConfig, OutputField, OutputFieldDB, GeneratedResult, UserProfile, Word, WordWithContext, LookupTables, ResolvedLookupIds, ParsedMeaning } from '../types';
 
 export const fetchUserSettings = async (userId: string): Promise<DatabaseSettings | null> => {
   const { data, error } = await supabase
@@ -298,4 +298,72 @@ export const updateUserRole = async (userId: string, newRole: 'user' | 'admin'):
     .eq('id', userId);
 
   if (error) throw error;
+};
+
+interface ConceptAncestor {
+  id: string;
+  name: string;
+}
+
+export const fetchConceptAncestors = async (
+  conceptId: string
+): Promise<ConceptAncestor[]> => {
+  const chain: ConceptAncestor[] = [];
+  let currentId: string | null = conceptId;
+
+  while (currentId) {
+    const { data: conceptData, error: conceptError } = await supabase
+      .from('concepts')
+      .select('id, name')
+      .eq('id', currentId)
+      .maybeSingle();
+
+    if (conceptError || !conceptData) break;
+
+    chain.unshift({ id: conceptData.id, name: conceptData.name });
+
+    const { data: parentData, error: parentError } = await supabase
+      .from('concept_concepts')
+      .select('parent_id')
+      .eq('child_id', currentId)
+      .maybeSingle();
+
+    if (parentError || !parentData) break;
+
+    currentId = parentData.parent_id;
+  }
+
+  return chain;
+};
+
+export const reconstructParsedMeaning = async (
+  conceptId: string | null,
+  wordLinkId: string | null,
+  contextDefinition: string | null
+): Promise<ParsedMeaning | null> => {
+  if (!conceptId) return null;
+
+  const chain = await fetchConceptAncestors(conceptId);
+  if (chain.length === 0) return null;
+
+  let wordLinkName = '';
+  if (wordLinkId) {
+    const { data } = await supabase
+      .from('word_links')
+      .select('name')
+      .eq('id', wordLinkId)
+      .maybeSingle();
+    wordLinkName = data?.name ?? '';
+  }
+
+  const meaning: ParsedMeaning = {};
+
+  if (chain[0]) meaning['Tier1'] = chain[0].name;
+  if (chain[1]) meaning['Tier2'] = chain[1].name;
+  if (chain[2]) meaning['Tier3'] = chain[2].name;
+
+  if (wordLinkName) meaning['ConceptLink'] = wordLinkName;
+  if (contextDefinition) meaning['Context Definition'] = contextDefinition;
+
+  return meaning;
 };
