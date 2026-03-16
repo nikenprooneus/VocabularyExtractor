@@ -1,5 +1,6 @@
 import { useRef, useCallback, useEffect } from 'react';
-import ForceGraph2D, { ForceGraphMethods } from 'react-force-graph-2d';
+import ForceGraph3D from 'react-force-graph-3d';
+import SpriteText from 'three-spritetext';
 import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { GraphData, GraphNode, WordGraphPayload } from '../../types';
 
@@ -23,14 +24,9 @@ const TMRND_SHADES: Record<string, string> = {
   register: '#a78bfa',
 };
 
-const NODE_RADII: Record<string, number> = {
-  concept: 11,
-  word: 8,
-  tmrnd: 5,
-};
-
 export function KnowledgeGraph({ graphData, onWordSelect, selectedWordId }: KnowledgeGraphProps) {
-  const fgRef = useRef<ForceGraphMethods<GraphNode> | undefined>(undefined);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fgRef = useRef<any>(undefined);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -39,147 +35,67 @@ export function KnowledgeGraph({ graphData, onWordSelect, selectedWordId }: Know
     return () => clearTimeout(timer);
   }, [graphData]);
 
-  const nodeCanvasObject = useCallback(
-    (node: GraphNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
-      const x = node.x ?? 0;
-      const y = node.y ?? 0;
-      const r = NODE_RADII[node.type] ?? 8;
-      const isSelected = node.type === 'word' && node.id === selectedWordId;
-
+  const nodeThreeObject = useCallback(
+    (node: GraphNode) => {
       let color = NODE_COLORS[node.type] ?? '#94a3b8';
       if (node.type === 'tmrnd' && node.tmrndSubType) {
         color = TMRND_SHADES[node.tmrndSubType] ?? color;
       }
 
-      if (isSelected) {
-        ctx.beginPath();
-        ctx.arc(x, y, r + 4, 0, 2 * Math.PI);
-        ctx.fillStyle = `${color}33`;
-        ctx.fill();
+      const isSelected = node.type === 'word' && node.id === selectedWordId;
+
+      const sprite = new SpriteText(node.label);
+
+      if (node.type === 'concept') {
+        sprite.textHeight = 6;
+        sprite.fontWeight = 'bold';
+        sprite.color = '#ffffff';
+        sprite.padding = 3;
+      } else if (node.type === 'word') {
+        sprite.textHeight = 4;
+        sprite.fontWeight = 'bold';
+        sprite.color = '#1e293b';
+        sprite.padding = 2;
+      } else {
+        sprite.textHeight = 3;
+        sprite.fontWeight = 'normal';
+        sprite.color = '#f8fafc';
+        sprite.padding = 2;
       }
 
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, 2 * Math.PI);
-      ctx.fillStyle = color;
-      ctx.fill();
+      sprite.backgroundColor = isSelected ? '#ffffff' : color;
+      sprite.borderRadius = 2;
 
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, 2 * Math.PI);
-      ctx.strokeStyle = isSelected ? '#ffffff' : `${color}80`;
-      ctx.lineWidth = isSelected ? 1.5 : 0.8;
-      ctx.stroke();
-
-      const label = node.label;
-      const fontSize = node.type === 'concept' ? 11 : node.type === 'word' ? 10 : 9;
-      ctx.font = `${node.type === 'concept' ? 600 : 400} ${fontSize / globalScale}px Inter, sans-serif`;
-      ctx.fillStyle = node.type === 'concept' ? '#e2e8f0' : '#94a3b8';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
-      ctx.fillText(label, x, y + r + 3 / globalScale);
+      return sprite;
     },
     [selectedWordId]
   );
 
-  const linkCanvasObject = useCallback(
-    (link: { source: GraphNode | string; target: GraphNode | string; label?: string; linkType?: string }, ctx: CanvasRenderingContext2D, globalScale: number) => {
-      const src = link.source as GraphNode;
-      const tgt = link.target as GraphNode;
-      if (!src.x || !src.y || !tgt.x || !tgt.y) return;
+  const linkThreeObject = useCallback(
+    (link: { label?: string }) => {
+      if (!link.label) return null;
 
-      const sx = src.x;
-      const sy = src.y;
-      const tx = tgt.x;
-      const ty = tgt.y;
+      const sprite = new SpriteText(link.label);
+      sprite.color = '#64748b';
+      sprite.textHeight = 1.5;
+      sprite.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+      sprite.borderRadius = 1;
+      sprite.padding = 1;
+      return sprite;
+    },
+    []
+  );
 
-      const linkType = link.linkType;
-
-      if (linkType === 'word-tmrnd') {
-        ctx.save();
-        ctx.setLineDash([3 / globalScale, 4 / globalScale]);
-        ctx.strokeStyle = '#475569';
-        ctx.lineWidth = 0.6;
-        ctx.globalAlpha = 0.5;
-        ctx.beginPath();
-        ctx.moveTo(sx, sy);
-        ctx.lineTo(tx, ty);
-        ctx.stroke();
-        ctx.restore();
-        return;
-      }
-
-      if (linkType === 'concept-concept') {
-        ctx.strokeStyle = '#64748b';
-        ctx.lineWidth = 1.2;
-        ctx.globalAlpha = 0.8;
-        ctx.beginPath();
-        ctx.moveTo(sx, sy);
-        ctx.lineTo(tx, ty);
-        ctx.stroke();
-
-        const angle = Math.atan2(ty - sy, tx - sx);
-        const arrowLen = 6 / globalScale;
-        const arrowX = tx - (NODE_RADII.concept + 2) / globalScale * Math.cos(angle);
-        const arrowY = ty - (NODE_RADII.concept + 2) / globalScale * Math.sin(angle);
-        ctx.fillStyle = '#64748b';
-        ctx.beginPath();
-        ctx.moveTo(arrowX, arrowY);
-        ctx.lineTo(arrowX - arrowLen * Math.cos(angle - 0.4), arrowY - arrowLen * Math.sin(angle - 0.4));
-        ctx.lineTo(arrowX - arrowLen * Math.cos(angle + 0.4), arrowY - arrowLen * Math.sin(angle + 0.4));
-        ctx.closePath();
-        ctx.fill();
-        ctx.globalAlpha = 1;
-        return;
-      }
-
-      if (linkType === 'word-concept') {
-        ctx.strokeStyle = '#3b82f640';
-        ctx.lineWidth = 1;
-        ctx.globalAlpha = 0.7;
-        ctx.beginPath();
-        ctx.moveTo(sx, sy);
-        ctx.lineTo(tx, ty);
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-
-        if (link.label && globalScale > 0.6) {
-          const mx = (sx + tx) / 2;
-          const my = (sy + ty) / 2;
-          const fontSize = 11 / globalScale;
-          const paddingX = 5 / globalScale;
-          const paddingY = 2.5 / globalScale;
-          const radius = 4 / globalScale;
-
-          ctx.font = `${fontSize}px Sans-Serif`;
-          const textWidth = ctx.measureText(link.label).width;
-          const pillW = textWidth + paddingX * 2;
-          const pillH = fontSize + paddingY * 2;
-          const pillX = mx - pillW / 2;
-          const pillY = my - pillH / 2;
-
-          ctx.beginPath();
-          ctx.moveTo(pillX + radius, pillY);
-          ctx.lineTo(pillX + pillW - radius, pillY);
-          ctx.arcTo(pillX + pillW, pillY, pillX + pillW, pillY + radius, radius);
-          ctx.lineTo(pillX + pillW, pillY + pillH - radius);
-          ctx.arcTo(pillX + pillW, pillY + pillH, pillX + pillW - radius, pillY + pillH, radius);
-          ctx.lineTo(pillX + radius, pillY + pillH);
-          ctx.arcTo(pillX, pillY + pillH, pillX, pillY + pillH - radius, radius);
-          ctx.lineTo(pillX, pillY + radius);
-          ctx.arcTo(pillX, pillY, pillX + radius, pillY, radius);
-          ctx.closePath();
-          ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-          ctx.fill();
-          ctx.strokeStyle = 'rgba(100, 116, 139, 0.5)';
-          ctx.lineWidth = 0.6 / globalScale;
-          ctx.stroke();
-
-          ctx.font = `${fontSize}px Sans-Serif`;
-          ctx.fillStyle = '#cbd5e1';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(link.label, mx, my);
-        }
-      }
+  const linkPositionUpdate = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (sprite: any, { start, end }: { start: { x: number; y: number; z: number }; end: { x: number; y: number; z: number } }) => {
+      if (!sprite) return;
+      const middlePos = {
+        x: (start.x + end.x) / 2,
+        y: (start.y + end.y) / 2,
+        z: (start.z + end.z) / 2,
+      };
+      Object.assign(sprite.position, middlePos);
     },
     []
   );
@@ -199,19 +115,23 @@ export function KnowledgeGraph({ graphData, onWordSelect, selectedWordId }: Know
 
   return (
     <div className="relative flex-1 h-full bg-slate-950 overflow-hidden">
-      <ForceGraph2D
+      <ForceGraph3D
         ref={fgRef}
-        graphData={graphData as unknown as Parameters<typeof ForceGraph2D>[0]['graphData']}
+        graphData={graphData as unknown as Parameters<typeof ForceGraph3D>[0]['graphData']}
         backgroundColor="#020617"
-        nodeCanvasObject={nodeCanvasObject as unknown as Parameters<typeof ForceGraph2D>[0]['nodeCanvasObject']}
-        linkCanvasObject={linkCanvasObject as unknown as Parameters<typeof ForceGraph2D>[0]['linkCanvasObject']}
-        onNodeClick={handleNodeClick as unknown as Parameters<typeof ForceGraph2D>[0]['onNodeClick']}
+        nodeThreeObject={nodeThreeObject as unknown as Parameters<typeof ForceGraph3D>[0]['nodeThreeObject']}
+        nodeThreeObjectExtend={false}
+        linkThreeObjectExtend={true}
+        linkThreeObject={linkThreeObject as unknown as Parameters<typeof ForceGraph3D>[0]['linkThreeObject']}
+        linkPositionUpdate={linkPositionUpdate as unknown as Parameters<typeof ForceGraph3D>[0]['linkPositionUpdate']}
+        onNodeClick={handleNodeClick as unknown as Parameters<typeof ForceGraph3D>[0]['onNodeClick']}
         nodeLabel={() => ''}
         cooldownTicks={100}
         d3AlphaDecay={0.02}
         d3VelocityDecay={0.3}
-        linkDirectionalArrowLength={0}
         warmupTicks={20}
+        linkDirectionalParticles={1}
+        linkDirectionalParticleWidth={0.5}
       />
 
       <div className="absolute top-4 right-4 flex flex-col gap-1.5">
