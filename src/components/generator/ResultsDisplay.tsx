@@ -32,18 +32,18 @@ export function ResultsDisplay({
   return (
     <>
       {results['Definition'] && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-sm font-medium text-gray-600 mb-2">Definition</h2>
-          <p className="text-lg leading-relaxed text-gray-900 font-normal">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 sm:p-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Definition</p>
+          <p className="text-base sm:text-lg leading-relaxed text-slate-900 font-normal">
             {results['Definition']}
           </p>
         </div>
       )}
 
       {settings.flashcardConfigs && settings.flashcardConfigs.length > 0 ? (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Flashcards</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 sm:p-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-4">Flashcards</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {settings.flashcardConfigs
               .filter(config => config.frontFieldId)
               .sort((a, b) => a.cardOrder - b.cardOrder)
@@ -58,21 +58,21 @@ export function ResultsDisplay({
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Extracted Fields</h2>
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 sm:p-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-4">Extracted Fields</p>
           <div className="space-y-4 max-h-96 overflow-y-auto">
             {settings.outputFields
               .filter(field => field.name !== 'Definition')
               .map((field) => (
                 <div key={field.id}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
                     {field.name}
                   </label>
                   <textarea
                     readOnly
                     value={results[field.name] || ''}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-default"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-700 cursor-default focus:outline-none"
                   />
                 </div>
               ))}
@@ -89,8 +89,8 @@ export function ResultsDisplay({
       )}
 
       {hasBothOutputs ? (
-        <div className="bg-white rounded-lg shadow p-6 space-y-3">
-          <h2 className="text-lg font-semibold text-gray-900">Full AI Analysis</h2>
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 sm:p-6 space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Full AI Analysis</p>
           <RawOutputPanel
             label="TMRND Analysis"
             rawOutput={results.rawOutput!}
@@ -103,30 +103,30 @@ export function ResultsDisplay({
           />
         </div>
       ) : results.rawOutput ? (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Full AI Analysis</h2>
-            <div className="flex gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Full AI Analysis</p>
+            <div className="flex gap-3">
               <button
                 onClick={onCopyRawOutput}
-                className="text-gray-600 hover:text-gray-800 transition-colors flex items-center gap-1 text-sm"
+                className="text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-1 text-xs font-medium"
                 title="Copy full analysis"
               >
-                <Copy size={16} />
+                <Copy size={13} />
                 Copy
               </button>
               <button
                 onClick={onToggleRawOutput}
-                className="text-gray-600 hover:text-gray-800 transition-colors flex items-center gap-1 text-sm"
+                className="text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-1 text-xs font-medium"
               >
                 {showRawOutput ? (
                   <>
-                    <ChevronUp size={16} />
+                    <ChevronUp size={13} />
                     Hide
                   </>
                 ) : (
                   <>
-                    <ChevronDown size={16} />
+                    <ChevronDown size={13} />
                     Show
                   </>
                 )}
@@ -134,8 +134,8 @@ export function ResultsDisplay({
             </div>
           </div>
           {showRawOutput && (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 max-h-96 overflow-y-auto">
-              <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">
+            <div className="bg-slate-50 border border-slate-200 rounded-md p-4 max-h-96 overflow-y-auto">
+              <pre className="text-sm text-slate-700 whitespace-pre-wrap font-mono leading-relaxed">
                 {results.rawOutput}
               </pre>
             </div>
@@ -156,30 +156,30 @@ function RawOutputPanel({ label, rawOutput, onCopy }: RawOutputPanelProps) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 bg-gray-50">
-        <span className="text-sm font-medium text-gray-700">{label}</span>
-        <div className="flex gap-2">
+    <div className="border border-slate-200 rounded-lg overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 bg-slate-50">
+        <span className="text-sm font-medium text-slate-700">{label}</span>
+        <div className="flex gap-3">
           <button
             onClick={onCopy}
-            className="text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1 text-xs"
+            className="text-slate-400 hover:text-slate-700 transition-colors flex items-center gap-1 text-xs font-medium"
             title={`Copy ${label}`}
           >
-            <Copy size={14} />
+            <Copy size={13} />
             Copy
           </button>
           <button
             onClick={() => setOpen(v => !v)}
-            className="text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1 text-xs"
+            className="text-slate-400 hover:text-slate-700 transition-colors flex items-center gap-1 text-xs font-medium"
           >
             {open ? (
               <>
-                <ChevronUp size={14} />
+                <ChevronUp size={13} />
                 Hide
               </>
             ) : (
               <>
-                <ChevronDown size={14} />
+                <ChevronDown size={13} />
                 Show
               </>
             )}
@@ -187,8 +187,8 @@ function RawOutputPanel({ label, rawOutput, onCopy }: RawOutputPanelProps) {
         </div>
       </div>
       {open && (
-        <div className="bg-white p-4 max-h-72 overflow-y-auto border-t border-gray-200">
-          <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">
+        <div className="bg-white p-4 max-h-72 overflow-y-auto border-t border-slate-200">
+          <pre className="text-sm text-slate-700 whitespace-pre-wrap font-mono leading-relaxed">
             {rawOutput}
           </pre>
         </div>

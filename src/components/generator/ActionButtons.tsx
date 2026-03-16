@@ -16,21 +16,21 @@ export function ActionButtons({
   onExport,
 }: ActionButtonsProps) {
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex gap-3">
+    <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row gap-2.5">
         <button
           onClick={onSave}
           disabled={isSaving}
-          className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-2 px-4 rounded-lg font-medium transition flex items-center justify-center gap-2"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-700 disabled:opacity-50 text-white py-2 px-5 rounded-md text-sm font-medium transition-all"
         >
           {isSaving ? (
             <>
-              <Loader size={18} className="animate-spin" />
+              <Loader size={15} className="animate-spin" />
               Saving...
             </>
           ) : (
             <>
-              <Save size={18} />
+              <Save size={15} />
               Save Complete Analysis
             </>
           )}
@@ -38,23 +38,23 @@ export function ActionButtons({
         <button
           onClick={onExport}
           disabled={isExporting || !webhookUrl}
-          className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-2 px-4 rounded-lg font-medium transition flex items-center justify-center gap-2"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-700 py-2 px-5 rounded-md text-sm font-medium transition-all"
         >
           {isExporting ? (
             <>
-              <Loader size={18} className="animate-spin" />
+              <Loader size={15} className="animate-spin" />
               Exporting...
             </>
           ) : (
             <>
-              <Send size={18} />
+              <Send size={15} />
               Export to Google Sheets
             </>
           )}
         </button>
       </div>
       {!webhookUrl && (
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-slate-400 mt-1.5">
           Webhook URL not configured. Configure it in Settings to enable exports.
         </p>
       )}
