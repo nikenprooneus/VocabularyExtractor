@@ -7,6 +7,7 @@ interface FilterSidebarProps {
   lookupTables: LookupTables;
   graphData: GraphData;
   filteredGraphData: GraphData;
+  onClose: () => void;
 }
 
 const TMRND_COLORS: Record<string, string> = {
@@ -23,6 +24,7 @@ export function FilterSidebar({
   onFilterChange,
   lookupTables,
   filteredGraphData,
+  onClose,
 }: FilterSidebarProps) {
   const hasActiveFilter = Object.values(filters).some((v) => v !== '');
 
@@ -61,9 +63,18 @@ export function FilterSidebar({
   return (
     <aside className="w-72 flex-shrink-0 h-full bg-slate-900 border-r border-slate-700/60 flex flex-col overflow-hidden">
       <div className="px-5 py-4 border-b border-slate-700/60">
-        <div className="flex items-center gap-2 mb-1">
-          <SlidersHorizontal size={16} className="text-slate-400" />
-          <h2 className="text-sm font-semibold text-slate-100 tracking-wide uppercase">Filter Graph</h2>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal size={16} className="text-slate-400" />
+            <h2 className="text-sm font-semibold text-slate-100 tracking-wide uppercase">Filter Graph</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="hover:bg-slate-800 text-slate-400 hover:text-slate-100 rounded-md p-1 transition-colors"
+            aria-label="Close sidebar"
+          >
+            <X size={16} />
+          </button>
         </div>
         <p className="text-xs text-slate-500">
           {nodeCount} node{nodeCount !== 1 ? 's' : ''} &middot; {linkCount} link{linkCount !== 1 ? 's' : ''}

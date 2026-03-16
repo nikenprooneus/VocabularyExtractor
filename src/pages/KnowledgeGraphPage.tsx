@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Loader2, Share2 } from 'lucide-react';
+import { Filter, Loader2, Share2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchGraphData } from '../services/conceptService';
 import { FilterSidebar } from '../components/knowledgegraph/FilterSidebar';
@@ -43,6 +43,7 @@ export default function KnowledgeGraphPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<GraphFilters>(DEFAULT_FILTERS);
   const [selectedWordPayload, setSelectedWordPayload] = useState<WordGraphPayload | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
 
   useEffect(() => {
     if (!user) return;
@@ -184,16 +185,39 @@ export default function KnowledgeGraphPage() {
   const isDataEmpty = !isLoading && rawGraphData !== null && rawGraphData.nodes.length === 0;
 
   return (
-    <div className="flex h-full w-full overflow-hidden">
-      <FilterSidebar
-        filters={filters}
-        onFilterChange={setFilters}
-        lookupTables={lookupTables}
-        graphData={rawGraphData ?? EMPTY_GRAPH}
-        filteredGraphData={filteredGraphData}
-      />
+    <div className="relative flex h-full w-full overflow-hidden">
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/20 z-10 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      <div
+        className={`absolute inset-y-0 left-0 z-20 lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:hidden'
+        }`}
+      >
+        <FilterSidebar
+          filters={filters}
+          onFilterChange={setFilters}
+          lookupTables={lookupTables}
+          graphData={rawGraphData ?? EMPTY_GRAPH}
+          filteredGraphData={filteredGraphData}
+          onClose={() => setIsSidebarOpen(false)}
+        />
+      </div>
 
       <div className="relative flex-1 h-full overflow-hidden">
+        {!isSidebarOpen && (
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="absolute top-4 left-4 z-10 bg-white border border-slate-200 shadow-sm rounded-md p-2 hover:bg-slate-50 text-slate-700 transition-colors"
+            aria-label="Open filters"
+          >
+            <Filter size={16} />
+          </button>
+        )}
         {isLoading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950 z-20">
             <Loader2 size={40} className="animate-spin text-blue-500 mb-4" />
