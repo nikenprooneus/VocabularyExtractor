@@ -1,4 +1,20 @@
 import { OutputField, GeneratedResult, ParsedMeaning } from '../types';
+import { DynamicZodSchema } from './schemaBuilder';
+
+export function parseStructuredOutput(
+  rawText: string,
+  zodSchema: DynamicZodSchema,
+  outputFields: OutputField[]
+): GeneratedResult {
+  try {
+    const parsed = JSON.parse(rawText);
+    const validated = zodSchema.parse(parsed);
+    return { ...validated, rawOutput: rawText };
+  } catch {
+    console.warn('Structured JSON parse failed, falling back to marker-tag extraction');
+    return parseMarkerTags(rawText, outputFields);
+  }
+}
 
 export function parseMarkerTags(rawText: string, outputFields: OutputField[]): GeneratedResult {
   const result: GeneratedResult = {
@@ -29,8 +45,19 @@ export function getMarkerTag(fieldName: string): string {
 
 export function parseSingleMeaning(
   rawText: string,
-  outputFields: OutputField[]
+  outputFields: OutputField[],
+  zodSchema?: DynamicZodSchema
 ): ParsedMeaning {
+  if (zodSchema) {
+    try {
+      const parsed = JSON.parse(rawText);
+      const validated = zodSchema.parse(parsed);
+      return validated as ParsedMeaning;
+    } catch {
+      console.warn('Structured JSON parse failed for concept tree, falling back to marker-tag extraction');
+    }
+  }
+
   const meaning: ParsedMeaning = {};
   outputFields.forEach((field) => {
     const pattern = new RegExp(`&${escapeRegex(field.name)}&\\{([^}]*)\\}`, 'i');

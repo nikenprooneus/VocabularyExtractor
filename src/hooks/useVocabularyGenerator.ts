@@ -8,7 +8,8 @@ import { supabase } from '../lib/supabase';
 import { resolveAllLookupIds, rehydrateNoteWithLookupNames } from '../services/lookupService';
 import { useAuth } from '../contexts/AuthContext';
 import { useConceptContext } from '../contexts/ConceptContext';
-import { parseSingleMeaning } from '../utils/parsingUtils';
+import { parseSingleMeaning, parseStructuredOutput } from '../utils/parsingUtils';
+import { buildApiJsonSchema, buildZodSchema } from '../utils/schemaBuilder';
 
 interface PendingConceptSelection {
   nodes: ConceptTreeNode[];
@@ -73,21 +74,29 @@ export function useVocabularyGenerator(settings: Settings): VocabularyGeneratorS
       ? settings.conceptTreePromptTemplate.replace(/\{\{Concept Bank\}\}/gi, conceptBank)
       : null;
 
-    const [tmrndResult, ctResult] = await Promise.all([
-      generateVocabulary(wordVal, exampleVal, settings.promptTemplate, settings.outputFields, apiConfig),
+    const tmrndSchema = buildApiJsonSchema(settings.outputFields);
+    const tmrndZod = buildZodSchema(settings.outputFields);
+
+    const ctSchema = hasCtConfig ? buildApiJsonSchema(settings.conceptTreeOutputFields) : undefined;
+    const ctZod = hasCtConfig ? buildZodSchema(settings.conceptTreeOutputFields) : undefined;
+
+    const [tmrndRaw, ctRaw] = await Promise.all([
+      generateVocabulary(wordVal, exampleVal, settings.promptTemplate, settings.outputFields, apiConfig, tmrndSchema),
       ctPrompt
-        ? generateVocabulary(wordVal, exampleVal, ctPrompt, settings.conceptTreeOutputFields, apiConfig)
+        ? generateVocabulary(wordVal, exampleVal, ctPrompt, settings.conceptTreeOutputFields, apiConfig, ctSchema)
         : Promise.resolve(null),
     ]);
 
+    const tmrndResult = parseStructuredOutput(tmrndRaw.rawOutput ?? '', tmrndZod, settings.outputFields);
+
     let ctMeaning: ParsedMeaning | null = null;
-    let ctRaw: string | undefined;
-    if (ctResult?.rawOutput) {
-      ctMeaning = parseSingleMeaning(ctResult.rawOutput, settings.conceptTreeOutputFields);
-      ctRaw = ctResult.rawOutput;
+    let ctRawOutput: string | undefined;
+    if (ctRaw?.rawOutput) {
+      ctMeaning = parseSingleMeaning(ctRaw.rawOutput, settings.conceptTreeOutputFields, ctZod);
+      ctRawOutput = ctRaw.rawOutput;
     }
 
-    return { tmrndResult, ctMeaning, ctRaw };
+    return { tmrndResult, ctMeaning, ctRaw: ctRawOutput };
   }, [settings, conceptBank, apiConfig]);
 
   const handleGenerate = useCallback(async (word: string, example: string): Promise<void> => {
