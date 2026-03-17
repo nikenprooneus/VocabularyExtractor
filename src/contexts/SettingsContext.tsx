@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 const DEFAULT_SETTINGS: Settings = {
   apiKey: '',
   baseUrl: '',
-  model: 'gpt-4o',
+  model: 'gpt-5-mini',
   llmProvider: 'openai' as LLMProvider,
   temperature: 0.7,
   llmMaxTokens: 2000,
