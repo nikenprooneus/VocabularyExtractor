@@ -170,26 +170,20 @@ async function assertJsonResponse(response: Response): Promise<void> {
   }
 }
 
-export async function testConnection(config: APIConfig): Promise<boolean> {
-  try {
-    const baseUrl = getBaseUrl(config);
+export async function testConnection(config: APIConfig): Promise<void> {
+  const baseUrl = getBaseUrl(config);
 
-    if (config.provider === 'anthropic') {
-      await callAnthropic(config, 'You are a helpful assistant.', 'Hello', 10);
-    } else if (config.provider === 'google') {
-      await callGemini(config, 'You are a helpful assistant.', 'Hello', 10);
-    } else {
-      await callOpenAICompatible(
-        baseUrl,
-        config,
-        [{ role: 'user', content: 'Hello' }],
-        10
-      );
-    }
-
-    return true;
-  } catch {
-    return false;
+  if (config.provider === 'anthropic') {
+    await callAnthropic(config, 'You are a helpful assistant.', 'Hello', 10);
+  } else if (config.provider === 'google') {
+    await callGemini(config, 'You are a helpful assistant.', 'Hello', 10);
+  } else {
+    await callOpenAICompatible(
+      baseUrl,
+      config,
+      [{ role: 'user', content: 'Hello' }],
+      10
+    );
   }
 }
 

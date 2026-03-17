@@ -177,7 +177,7 @@ function ProfileForm({ profile, temperature, maxTokens, onSave, onDelete, onCanc
           : form.provider === 'google' ? 'https://generativelanguage.googleapis.com'
           : form.provider === 'deepseek' ? 'https://api.deepseek.com/v1'
           : '');
-      const success = await testConnection({
+      await testConnection({
         apiKey: form.apiKey,
         baseUrl,
         model: form.model,
@@ -185,13 +185,10 @@ function ProfileForm({ profile, temperature, maxTokens, onSave, onDelete, onCanc
         temperature,
         maxTokens,
       });
-      if (success) {
-        toast.success('Connection successful!');
-      } else {
-        toast.error('Connection failed. Check your API key and model.');
-      }
-    } catch {
-      toast.error('Connection test failed.');
+      toast.success('Connection successful!');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Connection test failed.';
+      toast.error(message);
     } finally {
       setIsTesting(false);
     }
