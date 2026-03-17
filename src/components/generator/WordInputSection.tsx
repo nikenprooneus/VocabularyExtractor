@@ -35,7 +35,7 @@ export function WordInputSection({
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 sm:p-6">
       <div className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-5">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
               English Word <span className="text-red-500">*</span>
@@ -47,7 +47,7 @@ export function WordInputSection({
               onKeyDown={(e) => e.key === 'Enter' && onGenerate()}
               placeholder="e.g., serendipity"
               disabled={isLoading}
-              className="w-full bg-transparent border border-slate-200 rounded-md px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-transparent border border-slate-200 rounded-md px-4 py-3 text-lg sm:text-xl font-semibold text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           <div>
@@ -59,11 +59,11 @@ export function WordInputSection({
               value={example}
               onChange={handleExampleChange}
               placeholder="e.g., Finding that old book in the library was pure serendipity."
-              rows={2}
+              rows={1}
               required
               disabled={isLoading}
               style={{ overflow: 'hidden' }}
-              className="w-full bg-transparent border border-slate-200 rounded-md px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition disabled:opacity-50 disabled:cursor-not-allowed resize-none"
+              className="w-full bg-transparent border border-slate-200 rounded-md px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition disabled:opacity-50 disabled:cursor-not-allowed resize-none"
             />
           </div>
         </div>
