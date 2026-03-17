@@ -1,6 +1,16 @@
 import type { Session } from '@supabase/supabase-js';
 
-export type LLMProvider = 'openai' | 'anthropic' | 'google' | 'deepseek' | 'custom';
+export type LLMProvider = 'openai' | 'anthropic' | 'google' | 'deepseek' | 'custom' | 'openai-compatible';
+
+export interface LLMProviderProfile {
+  id: string;
+  name: string;
+  provider: LLMProvider;
+  apiKey: string;
+  baseURL?: string;
+  model: string;
+  isCustomModel?: boolean;
+}
 
 export interface OutputField {
   id: string;
@@ -15,10 +25,8 @@ export interface FlashcardConfig {
 }
 
 export interface Settings {
-  apiKey: string;
-  baseUrl: string;
-  model: string;
-  llmProvider: LLMProvider;
+  llmProfiles: LLMProviderProfile[];
+  activeLlmProfileId: string;
   temperature: number;
   llmMaxTokens: number;
   outputFields: OutputField[];
@@ -49,6 +57,19 @@ export interface APIConfig {
   maxTokens: number;
 }
 
+export interface DatabaseLLMProfile {
+  id: string;
+  user_id: string;
+  name: string;
+  provider: string;
+  api_key: string;
+  base_url: string | null;
+  model: string;
+  is_custom_model: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -70,6 +91,7 @@ export interface DatabaseSettings {
   webhook_url: string;
   concept_tree_prompt_template: string;
   concept_tree_output_fields: OutputField[];
+  active_llm_profile_id: string | null;
   created_at: string;
   updated_at: string;
 }

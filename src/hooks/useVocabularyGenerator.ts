@@ -50,17 +50,36 @@ export function useVocabularyGenerator(settings: Settings): VocabularyGeneratorS
   const [disambiguationContexts, setDisambiguationContexts] = useState<WordWithContext[] | null>(null);
   const pendingConceptSelection = useRef<PendingConceptSelection | null>(null);
 
+  const activeProfile = settings.llmProfiles.find((p) => p.id === settings.activeLlmProfileId)
+    ?? settings.llmProfiles[0]
+    ?? null;
+
+  const PROVIDER_BASE_URLS: Record<string, string> = {
+    openai: 'https://api.openai.com/v1',
+    anthropic: 'https://api.anthropic.com',
+    google: 'https://generativelanguage.googleapis.com',
+    deepseek: 'https://api.deepseek.com/v1',
+  };
+
+  const resolvedBaseUrl = activeProfile
+    ? (activeProfile.baseURL?.trim()
+        ? activeProfile.baseURL
+        : (PROVIDER_BASE_URLS[activeProfile.provider] ?? ''))
+    : '';
+
+  const resolvedProvider = activeProfile?.provider === 'openai-compatible' ? 'custom' : (activeProfile?.provider ?? 'openai');
+
   const apiConfig = {
-    apiKey: settings.apiKey,
-    baseUrl: settings.baseUrl,
-    model: settings.model,
-    provider: settings.llmProvider ?? 'openai',
+    apiKey: activeProfile?.apiKey ?? '',
+    baseUrl: resolvedBaseUrl,
+    model: activeProfile?.model ?? '',
+    provider: resolvedProvider as import('../types/index').LLMProvider,
     temperature: settings.temperature ?? 0.7,
     maxTokens: settings.llmMaxTokens ?? 2000,
   };
 
   const isSettingsConfigured = !!(
-    settings.apiKey &&
+    activeProfile?.apiKey &&
     settings.outputFields.length > 0 &&
     settings.flashcardConfigs.length > 0
   );

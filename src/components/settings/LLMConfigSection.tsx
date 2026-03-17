@@ -1,20 +1,26 @@
-import { Loader, Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
-import type { LLMProvider } from '../../types';
+import { Plus, Trash2, Eye, EyeOff, Loader, Check, ChevronRight, Pencil } from 'lucide-react';
+import type { LLMProvider, LLMProviderProfile } from '../../types';
+import { testConnection } from '../../services/apiService';
+import toast from 'react-hot-toast';
 
-interface ProviderConfig {
+interface ProviderMeta {
   id: LLMProvider;
   label: string;
   shortLabel: string;
   models: string[];
+  keyPlaceholder: string;
+  baseUrlRequired: boolean;
 }
 
-const PROVIDERS: ProviderConfig[] = [
+const PROVIDERS: ProviderMeta[] = [
   {
     id: 'openai',
     label: 'OpenAI',
     shortLabel: 'OpenAI',
     models: ['gpt-4.1-mini', 'gpt-4.1', 'gpt-4.1-nano', 'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo'],
+    keyPlaceholder: 'sk-...',
+    baseUrlRequired: false,
   },
   {
     id: 'anthropic',
@@ -27,249 +33,46 @@ const PROVIDERS: ProviderConfig[] = [
       'claude-3-5-haiku-20241022',
       'claude-3-opus-20240229',
     ],
+    keyPlaceholder: 'sk-ant-...',
+    baseUrlRequired: false,
   },
   {
     id: 'google',
     label: 'Google (Gemini)',
     shortLabel: 'Gemini',
     models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'],
+    keyPlaceholder: 'AIza...',
+    baseUrlRequired: false,
   },
   {
     id: 'deepseek',
     label: 'DeepSeek',
     shortLabel: 'DeepSeek',
     models: ['deepseek-chat', 'deepseek-reasoner'],
+    keyPlaceholder: 'sk-...',
+    baseUrlRequired: false,
   },
   {
-    id: 'custom',
-    label: 'Custom Proxy',
+    id: 'openai-compatible',
+    label: 'OpenAI-Compatible',
     shortLabel: 'Custom',
     models: [],
+    keyPlaceholder: 'sk-...',
+    baseUrlRequired: true,
   },
 ];
 
-interface LLMConfigSectionProps {
-  provider: LLMProvider;
-  apiKey: string;
-  baseUrl: string;
-  model: string;
-  temperature: number;
-  maxTokens: number;
-  isTestingConnection: boolean;
-  onProviderChange: (value: LLMProvider) => void;
-  onApiKeyChange: (value: string) => void;
-  onBaseUrlChange: (value: string) => void;
-  onModelChange: (value: string) => void;
-  onTemperatureChange: (value: number) => void;
-  onMaxTokensChange: (value: number) => void;
-  onTestConnection: () => void;
-}
-
-export function LLMConfigSection({
-  provider,
-  apiKey,
-  baseUrl,
-  model,
-  temperature,
-  maxTokens,
-  isTestingConnection,
-  onProviderChange,
-  onApiKeyChange,
-  onBaseUrlChange,
-  onModelChange,
-  onTemperatureChange,
-  onMaxTokensChange,
-  onTestConnection,
-}: LLMConfigSectionProps) {
-  const [showApiKey, setShowApiKey] = useState(false);
-
-  const selectedProvider = PROVIDERS.find((p) => p.id === provider) ?? PROVIDERS[0];
-  const isCustom = provider === 'custom';
-
-  const handleProviderChange = (newProvider: LLMProvider) => {
-    onProviderChange(newProvider);
-    const config = PROVIDERS.find((p) => p.id === newProvider);
-    if (config && config.models.length > 0) {
-      onModelChange(config.models[0]);
-    } else if (newProvider === 'custom') {
-      onModelChange('');
-    }
-  };
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      <div className="px-6 py-4 border-b border-slate-100">
-        <h2 className="text-base font-semibold text-slate-900">LLM Configuration</h2>
-        <p className="text-sm text-slate-500 mt-0.5">Select a provider and configure your API credentials</p>
-      </div>
-
-      <div className="p-6 space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-3">Provider</label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-            {PROVIDERS.map((p) => {
-              const isSelected = provider === p.id;
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => handleProviderChange(p.id)}
-                  className={`relative flex flex-col items-center justify-center px-2 py-3 rounded-lg border-2 text-xs font-medium transition-all duration-150 ${
-                    isSelected
-                      ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                  }`}
-                >
-                  <ProviderIcon provider={p.id} selected={isSelected} />
-                  <span className="mt-1.5 leading-tight text-center">{p.shortLabel}</span>
-                  {isSelected && (
-                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-blue-500" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-5">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              API Key <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <input
-                type={showApiKey ? 'text' : 'password'}
-                value={apiKey}
-                onChange={(e) => onApiKeyChange(e.target.value)}
-                placeholder={
-                  provider === 'anthropic'
-                    ? 'sk-ant-...'
-                    : provider === 'google'
-                    ? 'AIza...'
-                    : provider === 'deepseek'
-                    ? 'sk-...'
-                    : 'sk-...'
-                }
-                className="w-full pr-10 px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
-              />
-              <button
-                type="button"
-                onClick={() => setShowApiKey((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                {showApiKey ? <EyeOff size={15} /> : <Eye size={15} />}
-              </button>
-            </div>
-          </div>
-
-          {isCustom && (
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Base URL <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={baseUrl}
-                onChange={(e) => onBaseUrlChange(e.target.value)}
-                placeholder="https://my-proxy.example.com/v1"
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
-              />
-              <p className="text-xs text-slate-400 mt-1.5">
-                Must be an OpenAI-compatible endpoint. URL should end with{' '}
-                <code className="bg-slate-100 px-1 py-0.5 rounded">/v1</code>
-              </p>
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Model <span className="text-red-500">*</span>
-            </label>
-            {isCustom ? (
-              <input
-                type="text"
-                value={model}
-                onChange={(e) => onModelChange(e.target.value)}
-                placeholder="e.g. my-custom-model-v2"
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
-              />
-            ) : (
-              <select
-                value={model}
-                onChange={(e) => onModelChange(e.target.value)}
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-              >
-                {selectedProvider.models.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-sm font-medium text-slate-700">Temperature</label>
-                <span className="text-sm font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-                  {temperature.toFixed(1)}
-                </span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={2}
-                step={0.1}
-                value={temperature}
-                onChange={(e) => onTemperatureChange(parseFloat(e.target.value))}
-                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
-              />
-              <div className="flex justify-between text-xs text-slate-400 mt-1">
-                <span>0.0 Precise</span>
-                <span>2.0 Creative</span>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Max Tokens</label>
-              <input
-                type="number"
-                min={100}
-                max={32000}
-                step={100}
-                value={maxTokens}
-                onChange={(e) => onMaxTokensChange(parseInt(e.target.value, 10) || 2000)}
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <p className="text-xs text-slate-400 mt-1.5">Max tokens per generation (100–32000)</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="pt-2 border-t border-slate-100">
-          <button
-            onClick={onTestConnection}
-            disabled={isTestingConnection}
-            className="w-full bg-slate-700 hover:bg-slate-800 disabled:bg-slate-400 text-white py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-150 flex items-center justify-center gap-2"
-          >
-            {isTestingConnection ? (
-              <>
-                <Loader size={15} className="animate-spin" />
-                Testing connection...
-              </>
-            ) : (
-              'Test Connection'
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+const PROVIDER_BADGE_COLORS: Record<LLMProvider, string> = {
+  openai: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  anthropic: 'bg-amber-50 text-amber-700 border-amber-200',
+  google: 'bg-blue-50 text-blue-700 border-blue-200',
+  deepseek: 'bg-sky-50 text-sky-700 border-sky-200',
+  'openai-compatible': 'bg-slate-50 text-slate-700 border-slate-200',
+  custom: 'bg-slate-50 text-slate-700 border-slate-200',
+};
 
 function ProviderIcon({ provider, selected }: { provider: LLMProvider; selected: boolean }) {
-  const cls = `w-6 h-6 ${selected ? 'opacity-100' : 'opacity-60'}`;
+  const cls = `w-5 h-5 ${selected ? 'opacity-100' : 'opacity-55'}`;
   if (provider === 'openai') {
     return (
       <svg viewBox="0 0 24 24" className={cls} fill="currentColor">
@@ -302,5 +105,423 @@ function ProviderIcon({ provider, selected }: { provider: LLMProvider; selected:
     <svg viewBox="0 0 24 24" className={cls} fill="none" stroke="currentColor" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253" />
     </svg>
+  );
+}
+
+function makeBlankProfile(): LLMProviderProfile {
+  return {
+    id: crypto.randomUUID(),
+    name: '',
+    provider: 'openai',
+    apiKey: '',
+    baseURL: '',
+    model: 'gpt-4.1-mini',
+    isCustomModel: false,
+  };
+}
+
+interface ProfileFormProps {
+  profile: LLMProviderProfile;
+  temperature: number;
+  maxTokens: number;
+  onSave: (profile: LLMProviderProfile) => Promise<void>;
+  onDelete?: () => void;
+  onCancel: () => void;
+}
+
+function ProfileForm({ profile, temperature, maxTokens, onSave, onDelete, onCancel }: ProfileFormProps) {
+  const [form, setForm] = useState<LLMProviderProfile>({ ...profile });
+  const [showKey, setShowKey] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+
+  const providerMeta = PROVIDERS.find((p) => p.id === form.provider) ?? PROVIDERS[0];
+  const isCompatible = form.provider === 'openai-compatible';
+  const useTextModel = isCompatible || !!form.isCustomModel;
+
+  const handleProviderChange = (provider: LLMProvider) => {
+    const meta = PROVIDERS.find((p) => p.id === provider)!;
+    setForm((f) => ({
+      ...f,
+      provider,
+      model: meta.models[0] ?? '',
+      isCustomModel: provider === 'openai-compatible',
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim()) { toast.error('Profile name is required'); return; }
+    if (!form.apiKey.trim()) { toast.error('API Key is required'); return; }
+    if (isCompatible && !form.baseURL?.trim()) { toast.error('Base URL is required for OpenAI-Compatible'); return; }
+    if (!form.model.trim()) { toast.error('Model is required'); return; }
+    setIsSaving(true);
+    try {
+      await onSave(form);
+      toast.success('Profile saved');
+    } catch {
+      // error handled by caller
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleTest = async () => {
+    if (!form.apiKey.trim()) { toast.error('API Key is required'); return; }
+    if (isCompatible && !form.baseURL?.trim()) { toast.error('Base URL is required'); return; }
+    setIsTesting(true);
+    try {
+      const baseUrl = isCompatible
+        ? (form.baseURL ?? '')
+        : (form.provider === 'openai' ? 'https://api.openai.com/v1'
+          : form.provider === 'anthropic' ? 'https://api.anthropic.com'
+          : form.provider === 'google' ? 'https://generativelanguage.googleapis.com'
+          : form.provider === 'deepseek' ? 'https://api.deepseek.com/v1'
+          : '');
+      const success = await testConnection({
+        apiKey: form.apiKey,
+        baseUrl,
+        model: form.model,
+        provider: form.provider === 'openai-compatible' ? 'custom' : form.provider,
+        temperature,
+        maxTokens,
+      });
+      if (success) {
+        toast.success('Connection successful!');
+      } else {
+        toast.error('Connection failed. Check your API key and model.');
+      }
+    } catch {
+      toast.error('Connection test failed.');
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Profile Name</label>
+        <input
+          type="text"
+          value={form.name}
+          onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+          placeholder='e.g. "My Work OpenAI Key"'
+          className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Provider</label>
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+          {PROVIDERS.map((p) => {
+            const isSelected = form.provider === p.id;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => handleProviderChange(p.id)}
+                className={`relative flex flex-col items-center justify-center px-2 py-2.5 rounded-lg border-2 text-xs font-medium transition-all duration-150 ${
+                  isSelected
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                <ProviderIcon provider={p.id} selected={isSelected} />
+                <span className="mt-1 leading-tight text-center text-[11px]">{p.shortLabel}</span>
+                {isSelected && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-blue-500" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+          API Key <span className="text-red-400">*</span>
+        </label>
+        <div className="relative">
+          <input
+            type={showKey ? 'text' : 'password'}
+            value={form.apiKey}
+            onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
+            placeholder={providerMeta.keyPlaceholder}
+            className="w-full pr-10 px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+          />
+          <button
+            type="button"
+            onClick={() => setShowKey((v) => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+          </button>
+        </div>
+      </div>
+
+      {(isCompatible || form.baseURL) && (
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+            Base URL {isCompatible && <span className="text-red-400">*</span>}
+          </label>
+          <input
+            type="text"
+            value={form.baseURL ?? ''}
+            onChange={(e) => setForm((f) => ({ ...f, baseURL: e.target.value }))}
+            placeholder="https://my-proxy.example.com/v1"
+            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+          />
+          <p className="text-xs text-slate-400 mt-1">OpenAI-compatible endpoint. URL should end with <code className="bg-slate-100 px-1 rounded">/v1</code></p>
+        </div>
+      )}
+
+      {!isCompatible && !form.baseURL && (
+        <button
+          type="button"
+          onClick={() => setForm((f) => ({ ...f, baseURL: '' }))}
+          className="text-xs text-blue-600 hover:text-blue-700 underline underline-offset-2"
+        >
+          + Add custom Base URL override
+        </button>
+      )}
+
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            Model <span className="text-red-400">*</span>
+          </label>
+          {!isCompatible && (
+            <button
+              type="button"
+              onClick={() => setForm((f) => ({ ...f, isCustomModel: !f.isCustomModel, model: f.isCustomModel ? (providerMeta.models[0] ?? '') : f.model }))}
+              className="text-xs text-blue-600 hover:text-blue-700 underline underline-offset-2"
+            >
+              {form.isCustomModel ? 'Use dropdown' : 'Type custom model'}
+            </button>
+          )}
+        </div>
+        {useTextModel ? (
+          <input
+            type="text"
+            value={form.model}
+            onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))}
+            placeholder="e.g. gpt-5-mini or my-custom-model-v2"
+            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+          />
+        ) : (
+          <select
+            value={form.model}
+            onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))}
+            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+          >
+            {providerMeta.models.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2 pt-2">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving}
+          className="flex-1 bg-slate-800 hover:bg-slate-900 disabled:bg-slate-400 text-white py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
+        >
+          {isSaving ? <Loader size={14} className="animate-spin" /> : <Check size={14} />}
+          {isSaving ? 'Saving...' : 'Save Profile'}
+        </button>
+        <button
+          type="button"
+          onClick={handleTest}
+          disabled={isTesting}
+          className="flex-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
+        >
+          {isTesting ? <Loader size={14} className="animate-spin" /> : null}
+          {isTesting ? 'Testing...' : 'Test Connection'}
+        </button>
+        {onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="p-2.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-all"
+            title="Delete profile"
+          >
+            <Trash2 size={15} />
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onCancel}
+          className="p-2.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-all"
+          title="Cancel"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface LLMConfigSectionProps {
+  profiles: LLMProviderProfile[];
+  activeLlmProfileId: string;
+  temperature: number;
+  maxTokens: number;
+  onSaveProfile: (profile: LLMProviderProfile) => Promise<void>;
+  onDeleteProfile: (profileId: string) => Promise<void>;
+  onSetActive: (profileId: string) => Promise<void>;
+}
+
+export function LLMConfigSection({
+  profiles,
+  activeLlmProfileId,
+  temperature,
+  maxTokens,
+  onSaveProfile,
+  onDeleteProfile,
+  onSetActive,
+}: LLMConfigSectionProps) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [newProfile, setNewProfile] = useState<LLMProviderProfile>(makeBlankProfile());
+
+  const editingProfile = profiles.find((p) => p.id === editingId) ?? null;
+
+  const handleSaveNew = async (profile: LLMProviderProfile) => {
+    await onSaveProfile(profile);
+    setIsCreating(false);
+    setNewProfile(makeBlankProfile());
+  };
+
+  const handleSaveEdit = async (profile: LLMProviderProfile) => {
+    await onSaveProfile(profile);
+    setEditingId(null);
+  };
+
+  const handleDelete = async (profileId: string) => {
+    await onDeleteProfile(profileId);
+    if (editingId === profileId) setEditingId(null);
+  };
+
+  const handleSetActive = async (profileId: string) => {
+    await onSetActive(profileId);
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-slate-900">LLM Profiles</h2>
+          <p className="text-sm text-slate-500 mt-0.5">Manage API credentials and provider configurations</p>
+        </div>
+        {!isCreating && (
+          <button
+            type="button"
+            onClick={() => { setNewProfile(makeBlankProfile()); setIsCreating(true); setEditingId(null); }}
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-medium transition-all"
+          >
+            <Plus size={14} />
+            Add Profile
+          </button>
+        )}
+      </div>
+
+      <div className="p-6 space-y-4">
+        {profiles.length === 0 && !isCreating && (
+          <div className="text-center py-10 text-slate-400">
+            <p className="text-sm">No profiles yet.</p>
+            <button
+              type="button"
+              onClick={() => { setNewProfile(makeBlankProfile()); setIsCreating(true); }}
+              className="mt-3 text-sm text-blue-600 hover:text-blue-700 underline underline-offset-2"
+            >
+              Create your first profile
+            </button>
+          </div>
+        )}
+
+        {profiles.map((profile) => {
+          const isActive = profile.id === activeLlmProfileId;
+          const isEditing = profile.id === editingId;
+          const badge = PROVIDER_BADGE_COLORS[profile.provider] ?? PROVIDER_BADGE_COLORS['custom'];
+
+          return (
+            <div
+              key={profile.id}
+              className={`rounded-xl border transition-all duration-150 ${
+                isActive ? 'border-blue-300 bg-blue-50/40' : 'border-slate-200 bg-white'
+              }`}
+            >
+              {!isEditing ? (
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => handleSetActive(profile.id)}
+                    className={`w-4 h-4 shrink-0 rounded-full border-2 transition-all ${
+                      isActive
+                        ? 'border-blue-500 bg-blue-500'
+                        : 'border-slate-300 hover:border-blue-400'
+                    } flex items-center justify-center`}
+                  >
+                    {isActive && <span className="w-1.5 h-1.5 rounded-full bg-white block" />}
+                  </button>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-slate-800 truncate">{profile.name || 'Unnamed'}</span>
+                      <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded border ${badge}`}>
+                        {PROVIDERS.find((p) => p.id === profile.provider)?.shortLabel ?? profile.provider}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5 font-mono truncate">{profile.model}</p>
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    {isActive && (
+                      <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full mr-1">Active</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => { setEditingId(profile.id); setIsCreating(false); }}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"
+                      title="Edit"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <ChevronRight size={14} className="text-slate-300" />
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-sm font-semibold text-slate-700">Editing: {profile.name || 'Profile'}</span>
+                  </div>
+                  <ProfileForm
+                    profile={profile}
+                    temperature={temperature}
+                    maxTokens={maxTokens}
+                    onSave={handleSaveEdit}
+                    onDelete={() => handleDelete(profile.id)}
+                    onCancel={() => setEditingId(null)}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {isCreating && (
+          <div className="rounded-xl border-2 border-dashed border-blue-200 bg-blue-50/30 p-5">
+            <p className="text-sm font-semibold text-slate-700 mb-4">New Profile</p>
+            <ProfileForm
+              profile={newProfile}
+              temperature={temperature}
+              maxTokens={maxTokens}
+              onSave={handleSaveNew}
+              onCancel={() => { setIsCreating(false); setNewProfile(makeBlankProfile()); }}
+            />
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

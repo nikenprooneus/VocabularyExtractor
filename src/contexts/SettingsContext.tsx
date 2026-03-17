@@ -1,14 +1,21 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Settings, OutputField, FlashcardConfig, LLMProvider } from '../types/index';
+import { Settings, OutputField, FlashcardConfig, LLMProviderProfile } from '../types/index';
 import { useAuth } from './AuthContext';
-import { fetchUserSettings, upsertUserSettings, fetchOutputFields, saveOutputFields, fetchFlashcardConfigs } from '../services/supabaseService';
+import {
+  fetchUserSettings,
+  upsertUserSettings,
+  fetchOutputFields,
+  saveOutputFields,
+  fetchFlashcardConfigs,
+  fetchLLMProfiles,
+  upsertLLMProfile,
+  deleteLLMProfile as deleteLLMProfileFromDB,
+} from '../services/supabaseService';
 import toast from 'react-hot-toast';
 
 const DEFAULT_SETTINGS: Settings = {
-  apiKey: '',
-  baseUrl: '',
-  model: 'gpt-4.1-mini',
-  llmProvider: 'openai' as LLMProvider,
+  llmProfiles: [],
+  activeLlmProfileId: '',
   temperature: 0.7,
   llmMaxTokens: 2000,
   outputFields: [],
@@ -23,6 +30,9 @@ interface SettingsContextType {
   settings: Settings;
   updateSettings: (newSettings: Settings) => Promise<void>;
   syncFlashcardConfigs: (configs: FlashcardConfig[]) => void;
+  saveLLMProfile: (profile: LLMProviderProfile) => Promise<void>;
+  removeLLMProfile: (profileId: string) => Promise<void>;
+  setActiveLLMProfile: (profileId: string) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -44,10 +54,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     try {
       setIsLoading(true);
-      const [dbSettings, dbOutputFields, dbFlashcardConfigs] = await Promise.all([
+      const [dbSettings, dbOutputFields, dbFlashcardConfigs, dbLLMProfiles] = await Promise.all([
         fetchUserSettings(user.id),
         fetchOutputFields(user.id),
         fetchFlashcardConfigs(user.id),
+        fetchLLMProfiles(user.id),
       ]);
 
       const sortedFields = [...dbOutputFields].sort((a, b) => a.display_order - b.display_order);
@@ -63,12 +74,53 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         backFieldIds: row.back_field_ids,
       }));
 
+      let llmProfiles: LLMProviderProfile[] = dbLLMProfiles.map((row) => ({
+        id: row.id,
+        name: row.name,
+        provider: row.provider as LLMProviderProfile['provider'],
+        apiKey: row.api_key,
+        baseURL: row.base_url ?? undefined,
+        model: row.model,
+        isCustomModel: row.is_custom_model,
+      }));
+
+      let activeLlmProfileId = dbSettings?.active_llm_profile_id ?? '';
+
+      if (llmProfiles.length === 0 && dbSettings?.api_key) {
+        const migratedProfile: LLMProviderProfile = {
+          id: crypto.randomUUID(),
+          name: 'Default',
+          provider: (dbSettings.llm_provider as LLMProviderProfile['provider']) ?? 'openai',
+          apiKey: dbSettings.api_key,
+          baseURL: dbSettings.base_url || undefined,
+          model: dbSettings.model || 'gpt-4.1-mini',
+          isCustomModel: dbSettings.llm_provider === 'custom' || dbSettings.llm_provider === 'openai-compatible',
+        };
+        try {
+          const saved = await upsertLLMProfile(user.id, migratedProfile);
+          migratedProfile.id = saved.id;
+          llmProfiles = [migratedProfile];
+          activeLlmProfileId = migratedProfile.id;
+          await upsertUserSettings(user.id, {
+            temperature: dbSettings.temperature ?? 0.7,
+            llm_max_tokens: dbSettings.llm_max_tokens ?? 2000,
+            prompt_template: dbSettings.prompt_template ?? '',
+            webhook_url: dbSettings.webhook_url ?? '',
+            concept_tree_prompt_template: dbSettings.concept_tree_prompt_template ?? '',
+            concept_tree_output_fields: Array.isArray(dbSettings.concept_tree_output_fields)
+              ? dbSettings.concept_tree_output_fields
+              : [],
+            active_llm_profile_id: migratedProfile.id,
+          });
+        } catch {
+          // migration failure is non-fatal
+        }
+      }
+
       if (dbSettings) {
         setSettings({
-          apiKey: dbSettings.api_key,
-          baseUrl: dbSettings.base_url ?? '',
-          model: dbSettings.model,
-          llmProvider: (dbSettings.llm_provider as LLMProvider) ?? 'openai',
+          llmProfiles,
+          activeLlmProfileId,
           temperature: dbSettings.temperature ?? 0.7,
           llmMaxTokens: dbSettings.llm_max_tokens ?? 2000,
           outputFields,
@@ -81,7 +133,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             : [],
         });
       } else {
-        setSettings((prev) => ({ ...prev, outputFields, flashcardConfigs }));
+        setSettings((prev) => ({ ...prev, llmProfiles, activeLlmProfileId, outputFields, flashcardConfigs }));
       }
     } catch {
       // Errors are handled by the caller via toast
@@ -95,16 +147,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     try {
       await upsertUserSettings(user.id, {
-        api_key: newSettings.apiKey,
-        base_url: newSettings.baseUrl,
-        model: newSettings.model,
-        llm_provider: newSettings.llmProvider,
         temperature: newSettings.temperature,
         llm_max_tokens: newSettings.llmMaxTokens,
         prompt_template: newSettings.promptTemplate,
         webhook_url: newSettings.webhookUrl,
         concept_tree_prompt_template: newSettings.conceptTreePromptTemplate,
         concept_tree_output_fields: newSettings.conceptTreeOutputFields,
+        active_llm_profile_id: newSettings.activeLlmProfileId || null,
       });
 
       const outputFieldsToSave = newSettings.outputFields.map((field, index) => ({
@@ -125,12 +174,75 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const saveLLMProfile = async (profile: LLMProviderProfile) => {
+    if (!user?.id) return;
+    try {
+      const saved = await upsertLLMProfile(user.id, profile);
+      const savedProfile: LLMProviderProfile = {
+        id: saved.id,
+        name: saved.name,
+        provider: saved.provider as LLMProviderProfile['provider'],
+        apiKey: saved.api_key,
+        baseURL: saved.base_url ?? undefined,
+        model: saved.model,
+        isCustomModel: saved.is_custom_model,
+      };
+      setSettings((prev) => {
+        const exists = prev.llmProfiles.some((p) => p.id === savedProfile.id);
+        const llmProfiles = exists
+          ? prev.llmProfiles.map((p) => (p.id === savedProfile.id ? savedProfile : p))
+          : [...prev.llmProfiles, savedProfile];
+        const activeLlmProfileId = prev.activeLlmProfileId || savedProfile.id;
+        return { ...prev, llmProfiles, activeLlmProfileId };
+      });
+    } catch {
+      toast.error('Failed to save profile');
+      throw new Error('Failed to save profile');
+    }
+  };
+
+  const removeLLMProfile = async (profileId: string) => {
+    if (!user?.id) return;
+    try {
+      await deleteLLMProfileFromDB(profileId);
+      setSettings((prev) => {
+        const llmProfiles = prev.llmProfiles.filter((p) => p.id !== profileId);
+        const activeLlmProfileId =
+          prev.activeLlmProfileId === profileId
+            ? (llmProfiles[0]?.id ?? '')
+            : prev.activeLlmProfileId;
+        return { ...prev, llmProfiles, activeLlmProfileId };
+      });
+    } catch {
+      toast.error('Failed to delete profile');
+      throw new Error('Failed to delete profile');
+    }
+  };
+
+  const setActiveLLMProfile = async (profileId: string) => {
+    if (!user?.id) return;
+    try {
+      await upsertUserSettings(user.id, {
+        temperature: settings.temperature,
+        llm_max_tokens: settings.llmMaxTokens,
+        prompt_template: settings.promptTemplate,
+        webhook_url: settings.webhookUrl,
+        concept_tree_prompt_template: settings.conceptTreePromptTemplate,
+        concept_tree_output_fields: settings.conceptTreeOutputFields,
+        active_llm_profile_id: profileId || null,
+      });
+      setSettings((prev) => ({ ...prev, activeLlmProfileId: profileId }));
+    } catch {
+      toast.error('Failed to set active profile');
+    }
+  };
+
   const syncFlashcardConfigs = (configs: FlashcardConfig[]) => {
     setSettings((prev) => ({ ...prev, flashcardConfigs: configs }));
   };
 
   return (
-    <SettingsContext.Provider value={{ settings, updateSettings, syncFlashcardConfigs, isLoading }}>
+    <SettingsContext.Provider value={{ settings, updateSettings, syncFlashcardConfigs, saveLLMProfile, removeLLMProfile, setActiveLLMProfile, isLoading }}>
       {children}
     </SettingsContext.Provider>
   );

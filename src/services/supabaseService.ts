@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { DatabaseSettings, DatabaseFlashcardConfig, FlashcardConfig, OutputField, OutputFieldDB, GeneratedResult, UserProfile, Word, WordWithContext, LookupTables, ResolvedLookupIds, ParsedMeaning } from '../types';
+import { DatabaseSettings, DatabaseFlashcardConfig, DatabaseLLMProfile, FlashcardConfig, LLMProviderProfile, OutputField, OutputFieldDB, GeneratedResult, UserProfile, Word, WordWithContext, LookupTables, ResolvedLookupIds, ParsedMeaning } from '../types';
 
 export const fetchUserSettings = async (userId: string): Promise<DatabaseSettings | null> => {
   const { data, error } = await supabase
@@ -15,16 +15,17 @@ export const fetchUserSettings = async (userId: string): Promise<DatabaseSetting
 export const upsertUserSettings = async (
   userId: string,
   settings: {
-    api_key: string;
-    base_url: string;
-    model: string;
-    llm_provider: string;
+    api_key?: string;
+    base_url?: string;
+    model?: string;
+    llm_provider?: string;
     temperature: number;
     llm_max_tokens: number;
     prompt_template: string;
     webhook_url: string;
     concept_tree_prompt_template: string;
     concept_tree_output_fields: OutputField[];
+    active_llm_profile_id?: string | null;
   }
 ): Promise<DatabaseSettings> => {
   const { data, error } = await supabase
@@ -84,6 +85,53 @@ export const deleteFlashcardConfig = async (configId: string): Promise<void> => 
     .from('flashcard_configs')
     .delete()
     .eq('id', configId);
+
+  if (error) throw error;
+};
+
+export const fetchLLMProfiles = async (userId: string): Promise<DatabaseLLMProfile[]> => {
+  const { data, error } = await supabase
+    .from('llm_profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+};
+
+export const upsertLLMProfile = async (
+  userId: string,
+  profile: LLMProviderProfile
+): Promise<DatabaseLLMProfile> => {
+  const { data, error } = await supabase
+    .from('llm_profiles')
+    .upsert(
+      {
+        id: profile.id,
+        user_id: userId,
+        name: profile.name,
+        provider: profile.provider,
+        api_key: profile.apiKey,
+        base_url: profile.baseURL ?? null,
+        model: profile.model,
+        is_custom_model: profile.isCustomModel ?? false,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'id' }
+    )
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+export const deleteLLMProfile = async (profileId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('llm_profiles')
+    .delete()
+    .eq('id', profileId);
 
   if (error) throw error;
 };

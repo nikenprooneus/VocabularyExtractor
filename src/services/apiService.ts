@@ -9,7 +9,7 @@ const PROVIDER_BASE_URLS: Record<string, string> = {
 };
 
 function getBaseUrl(config: APIConfig): string {
-  if (config.provider === 'custom') {
+  if (config.provider === 'custom' || config.provider === 'openai-compatible') {
     return config.baseUrl;
   }
   return PROVIDER_BASE_URLS[config.provider] ?? config.baseUrl;
@@ -216,7 +216,7 @@ export async function generateVocabulary(
     rawContent = await callAnthropic(config, systemMessage, prompt, config.maxTokens, jsonSchema);
   } else if (config.provider === 'google') {
     rawContent = await callGemini(config, systemMessage, prompt, config.maxTokens, jsonSchema);
-  } else if (config.provider === 'custom') {
+  } else if (config.provider === 'custom' || config.provider === 'openai-compatible') {
     try {
       rawContent = await callOpenAICompatible(
         baseUrl,

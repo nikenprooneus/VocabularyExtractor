@@ -35,7 +35,10 @@ export function Generator({ settings, isLoading: settingsLoading = false }: Gene
     clearDisambiguation,
   } = useVocabularyGenerator(settings);
 
-  const isLLMConfigured = !!(settings.apiKey && settings.outputFields.length > 0);
+  const activeProfile = settings.llmProfiles.find((p) => p.id === settings.activeLlmProfileId)
+    ?? settings.llmProfiles[0]
+    ?? null;
+  const isLLMConfigured = !!(activeProfile?.apiKey && settings.outputFields.length > 0);
   const hasFlashcardConfig = settings.flashcardConfigs.length > 0;
   const isSettingsConfigured = isLLMConfigured && hasFlashcardConfig;
 

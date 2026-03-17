@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Loader, LayoutList, BrainCircuit, Share2, GitBranch } from 'lucide-react';
-import { Settings as SettingsType, OutputField, FlashcardConfig, LLMProvider } from '../types/index';
-import { testConnection } from '../services/apiService';
+import { Settings as SettingsType, OutputField, FlashcardConfig, LLMProviderProfile } from '../types/index';
 import { saveOutputFields, upsertFlashcardConfig, deleteFlashcardConfig } from '../services/supabaseService';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -22,12 +21,8 @@ interface SettingsProps {
 
 export function Settings({ settings, onSave, isLoading }: SettingsProps) {
   const { user } = useAuth();
-  const { syncFlashcardConfigs, updateSettings } = useSettings();
+  const { syncFlashcardConfigs, updateSettings, saveLLMProfile, removeLLMProfile, setActiveLLMProfile } = useSettings();
 
-  const [apiKey, setApiKey] = useState(settings.apiKey);
-  const [baseUrl, setBaseUrl] = useState(settings.baseUrl);
-  const [model, setModel] = useState(settings.model);
-  const [llmProvider, setLlmProvider] = useState<LLMProvider>(settings.llmProvider ?? 'openai');
   const [temperature, setTemperature] = useState(settings.temperature ?? 0.7);
   const [llmMaxTokens, setLlmMaxTokens] = useState(settings.llmMaxTokens ?? 2000);
   const [outputFields, setOutputFields] = useState<OutputField[]>(settings.outputFields);
@@ -40,7 +35,6 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
   const [conceptTreeOutputFields, setConceptTreeOutputFields] = useState<OutputField[]>(settings.conceptTreeOutputFields || []);
   const [newCtFieldName, setNewCtFieldName] = useState('');
 
-  const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'TMRND' | 'ConceptTree' | 'AI' | 'Export'>('TMRND');
 
@@ -52,10 +46,6 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
   ];
 
   useEffect(() => {
-    setApiKey(settings.apiKey);
-    setBaseUrl(settings.baseUrl);
-    setModel(settings.model);
-    setLlmProvider(settings.llmProvider ?? 'openai');
     setTemperature(settings.temperature ?? 0.7);
     setLlmMaxTokens(settings.llmMaxTokens ?? 2000);
     setPromptTemplate(settings.promptTemplate);
@@ -229,43 +219,25 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
     }
   };
 
-  const handleTestConnection = async () => {
-    if (!apiKey.trim()) { toast.error('API Key is required'); return; }
-    if (llmProvider === 'custom' && !baseUrl.trim()) { toast.error('Base URL is required for Custom Proxy'); return; }
-    setIsTestingConnection(true);
-    try {
-      const success = await testConnection({
-        apiKey,
-        baseUrl,
-        model,
-        provider: llmProvider,
-        temperature,
-        maxTokens: llmMaxTokens,
-      });
-      if (success) {
-        toast.success('Connection successful!');
-      } else {
-        toast.error('Connection failed. Check your API key and model.');
-      }
-    } catch {
-      toast.error('Connection test failed. Please check your settings.');
-    } finally {
-      setIsTestingConnection(false);
+  const handleSaveProfile = async (profile: LLMProviderProfile) => {
+    await saveLLMProfile(profile);
+    if (!settings.activeLlmProfileId) {
+      await setActiveLLMProfile(profile.id);
     }
   };
 
+  const handleDeleteProfile = async (profileId: string) => {
+    await removeLLMProfile(profileId);
+  };
+
   const handleSave = async () => {
-    if (!apiKey.trim()) { toast.error('API Key is required'); return; }
-    if (llmProvider === 'custom' && !baseUrl.trim()) { toast.error('Base URL is required for Custom Proxy'); return; }
     if (outputFields.length === 0) { toast.error('At least one output field is required'); return; }
 
     setIsSaving(true);
     try {
       const updatedSettings: SettingsType = {
-        apiKey,
-        baseUrl,
-        model,
-        llmProvider,
+        llmProfiles: settings.llmProfiles,
+        activeLlmProfileId: settings.activeLlmProfileId,
         temperature,
         llmMaxTokens,
         outputFields,
@@ -378,22 +350,61 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
         )}
 
         {activeTab === 'AI' && (
-          <LLMConfigSection
-            provider={llmProvider}
-            apiKey={apiKey}
-            baseUrl={baseUrl}
-            model={model}
-            temperature={temperature}
-            maxTokens={llmMaxTokens}
-            isTestingConnection={isTestingConnection}
-            onProviderChange={setLlmProvider}
-            onApiKeyChange={setApiKey}
-            onBaseUrlChange={setBaseUrl}
-            onModelChange={setModel}
-            onTemperatureChange={setTemperature}
-            onMaxTokensChange={setLlmMaxTokens}
-            onTestConnection={handleTestConnection}
-          />
+          <>
+            <LLMConfigSection
+              profiles={settings.llmProfiles}
+              activeLlmProfileId={settings.activeLlmProfileId}
+              temperature={temperature}
+              maxTokens={llmMaxTokens}
+              onSaveProfile={handleSaveProfile}
+              onDeleteProfile={handleDeleteProfile}
+              onSetActive={setActiveLLMProfile}
+            />
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100">
+                <h2 className="text-base font-semibold text-slate-900">Global Generation Settings</h2>
+                <p className="text-sm text-slate-500 mt-0.5">Applied to all profiles when generating</p>
+              </div>
+              <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-sm font-medium text-slate-700">Temperature</label>
+                    <span className="text-sm font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                      {temperature.toFixed(1)}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={2}
+                    step={0.1}
+                    value={temperature}
+                    onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                  />
+                  <div className="flex justify-between text-xs text-slate-400 mt-1">
+                    <span>0.0 Precise</span>
+                    <span>2.0 Creative</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Max Tokens</label>
+                  <input
+                    type="number"
+                    min={100}
+                    max={32000}
+                    step={100}
+                    value={llmMaxTokens}
+                    onChange={(e) => setLlmMaxTokens(parseInt(e.target.value, 10) || 2000)}
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-slate-400 mt-1.5">Max tokens per generation (100–32000)</p>
+                </div>
+              </div>
+            </div>
+          </>
         )}
 
         {activeTab === 'Export' && (
