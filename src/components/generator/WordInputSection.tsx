@@ -26,10 +26,50 @@ export function WordInputSection({
 }: WordInputSectionProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const isWordMissing =
+    word.trim() !== '' &&
+    example.trim() !== '' &&
+    !example.toLowerCase().includes(word.toLowerCase().trim());
+
   const handleExampleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     e.target.style.height = 'auto';
     e.target.style.height = `${e.target.scrollHeight}px`;
     onExampleChange(e.target.value);
+  };
+
+  const handleExampleSelectionChange = (
+    e: React.MouseEvent<HTMLTextAreaElement> | React.KeyboardEvent<HTMLTextAreaElement>
+  ) => {
+    const target = e.target as HTMLTextAreaElement;
+    const start = target.selectionStart;
+    const end = target.selectionEnd;
+    if (start == null || end == null) return;
+    const selected = target.value.slice(start, end).trim();
+    if (selected.length > 0 && selected.length < 50) {
+      onWordChange(selected);
+    }
+  };
+
+  const renderHighlightedExample = () => {
+    const trimmedWord = word.trim();
+    if (!trimmedWord || !example) {
+      return <span>{example}</span>;
+    }
+    const regex = new RegExp(`(${trimmedWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = example.split(regex);
+    return (
+      <>
+        {parts.map((part, i) =>
+          regex.test(part) ? (
+            <mark key={i} className="bg-yellow-200/60 text-transparent rounded px-0.5">
+              {part}
+            </mark>
+          ) : (
+            <span key={i}>{part}</span>
+          )
+        )}
+      </>
+    );
   };
 
   return (
@@ -54,24 +94,43 @@ export function WordInputSection({
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
               Example Sentence <span className="text-red-500">*</span>
             </label>
-            <textarea
-              ref={textareaRef}
-              value={example}
-              onChange={handleExampleChange}
-              placeholder="e.g., Finding that old book in the library was pure serendipity."
-              rows={1}
-              required
-              disabled={isLoading}
-              style={{ overflow: 'hidden' }}
-              className="w-full bg-transparent border border-slate-200 rounded-md px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition disabled:opacity-50 disabled:cursor-not-allowed resize-none"
-            />
+            <div className="relative">
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 pointer-events-none overflow-hidden rounded-md px-4 py-3 text-base whitespace-pre-wrap break-words text-transparent leading-normal"
+              >
+                {renderHighlightedExample()}
+              </div>
+              <textarea
+                ref={textareaRef}
+                value={example}
+                onChange={handleExampleChange}
+                onMouseUp={handleExampleSelectionChange}
+                onKeyUp={handleExampleSelectionChange}
+                placeholder="e.g., Finding that old book in the library was pure serendipity."
+                rows={1}
+                required
+                disabled={isLoading}
+                style={{ overflow: 'hidden' }}
+                className={`w-full bg-transparent relative z-10 border rounded-md px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:border-transparent transition disabled:opacity-50 disabled:cursor-not-allowed resize-none leading-normal ${
+                  isWordMissing
+                    ? 'border-red-500 focus:ring-red-500'
+                    : 'border-slate-200 focus:ring-slate-900'
+                }`}
+              />
+            </div>
+            {isWordMissing && (
+              <p className="mt-1.5 text-xs text-red-500">
+                The word must be present in the example sentence.
+              </p>
+            )}
           </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2.5">
           <button
             onClick={onGenerate}
-            disabled={isLoading || !isSettingsConfigured || !word.trim() || !example.trim()}
+            disabled={isLoading || !isSettingsConfigured || !word.trim() || !example.trim() || isWordMissing}
             className="w-full sm:w-auto flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-700 disabled:opacity-50 text-white py-2 px-5 rounded-md text-sm font-medium transition-all"
           >
             {isLoading ? (
