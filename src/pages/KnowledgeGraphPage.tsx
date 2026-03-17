@@ -64,7 +64,12 @@ export default function KnowledgeGraphPage() {
     const hasAnyFilter =
       conceptText || wordText || toneId || dialectId || modeId || nuanceId || registerId || wordLinkId;
 
-    if (!hasAnyFilter) return rawGraphData;
+    const stripTmrnd = (data: GraphData): GraphData => ({
+      nodes: data.nodes.filter((n) => n.type === 'word' || n.type === 'concept'),
+      links: data.links.filter((l) => l.linkType !== 'word-tmrnd'),
+    });
+
+    if (!hasAnyFilter) return stripTmrnd(rawGraphData);
 
     const getId = (nodeOrId: any): string =>
       typeof nodeOrId === 'object' && nodeOrId !== null ? nodeOrId.id : nodeOrId;
@@ -177,7 +182,7 @@ export default function KnowledgeGraphPage() {
       return finalNodeIds.has(src) && finalNodeIds.has(tgt);
     });
 
-    return { nodes: finalNodes, links: finalLinks };
+    return stripTmrnd({ nodes: finalNodes, links: finalLinks });
   }, [rawGraphData, filters]);
 
   const hasActiveFilter = Object.values(filters).some((v) => v !== '');

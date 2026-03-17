@@ -77,10 +77,10 @@ export function KnowledgeGraph({ graphData, onWordSelect, selectedWordId }: Know
 
       const sprite = new SpriteText(link.label);
       sprite.color = '#64748b';
-      sprite.textHeight = 1.5;
+      sprite.textHeight = 3;
       sprite.backgroundColor = 'rgba(255, 255, 255, 0.9)';
       sprite.borderRadius = 1;
-      sprite.padding = 1;
+      sprite.padding = 2;
       return sprite;
     },
     []
@@ -132,6 +132,7 @@ export function KnowledgeGraph({ graphData, onWordSelect, selectedWordId }: Know
         warmupTicks={20}
         linkDirectionalParticles={1}
         linkDirectionalParticleWidth={0.5}
+        linkWidth={(link: any) => link.linkType === 'concept-concept' ? 2.5 : 1.5}
       />
 
       <div className="absolute top-4 right-4 flex flex-col gap-1.5">
@@ -155,7 +156,6 @@ export function KnowledgeGraph({ graphData, onWordSelect, selectedWordId }: Know
         {[
           { color: 'bg-blue-500', label: 'Concept' },
           { color: 'bg-emerald-500', label: 'Word' },
-          { color: 'bg-amber-400', label: 'TMRND' },
         ].map(({ color, label }) => (
           <div key={label} className="flex items-center gap-1.5">
             <span className={`w-2.5 h-2.5 rounded-full ${color}`} />
