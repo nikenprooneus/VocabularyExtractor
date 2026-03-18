@@ -11,6 +11,7 @@ import GeneratorPage from './pages/GeneratorPage';
 import SettingsPage from './pages/SettingsPage';
 import AdminDashboard from './pages/AdminDashboard';
 import KnowledgeGraphPage from './pages/KnowledgeGraphPage';
+import ReaderPage from './pages/ReaderPage';
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
                       <Route path="/" element={<GeneratorPage />} />
                       <Route path="/settings" element={<SettingsPage />} />
                       <Route path="/knowledge-graph" element={<KnowledgeGraphPage />} />
+                      <Route path="/reader" element={<ReaderPage />} />
                       <Route
                         path="/admin"
                         element={

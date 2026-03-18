@@ -1,7 +1,7 @@
 import { ReactNode, useState, useCallback, useRef, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Zap, Settings, Shield, ChevronDown, Network } from 'lucide-react';
+import { LogOut, Zap, Settings, Shield, ChevronDown, Network, BookOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface LayoutProps {
@@ -38,6 +38,8 @@ export default function Layout({ children }: LayoutProps) {
 
   const isAdmin = user?.role === 'admin';
   const isGraphPage = location.pathname === '/knowledge-graph';
+  const isReaderPage = location.pathname === '/reader';
+  const isDarkPage = isGraphPage || isReaderPage;
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -56,17 +58,17 @@ export default function Layout({ children }: LayoutProps) {
   const navLinkClass = (path: string) =>
     `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
       isActive(path)
-        ? isGraphPage
+        ? isDarkPage
           ? 'bg-slate-700 text-slate-100'
           : 'bg-slate-100 text-slate-900'
-        : isGraphPage
+        : isDarkPage
         ? 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
     }`;
 
   return (
-    <div className={isGraphPage ? 'h-screen flex flex-col bg-slate-950 overflow-hidden' : 'min-h-screen bg-slate-50'}>
-      <header className={`sticky top-0 z-50 flex-shrink-0 ${isGraphPage ? 'bg-slate-900 border-b border-slate-700/60' : 'bg-white border-b border-slate-200'}`}>
+    <div className={isDarkPage ? 'h-screen flex flex-col bg-slate-950 overflow-hidden' : 'min-h-screen bg-slate-50'}>
+      <header className={`sticky top-0 z-50 flex-shrink-0 ${isDarkPage ? 'bg-slate-900 border-b border-slate-700/60' : 'bg-white border-b border-slate-200'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14 relative">
             <div className="flex-shrink-0 flex items-center z-10">
@@ -74,7 +76,7 @@ export default function Layout({ children }: LayoutProps) {
                 <div className="w-7 h-7 bg-slate-900 rounded-md flex items-center justify-center flex-shrink-0">
                   <Zap className="w-4 h-4 text-white" />
                 </div>
-                <span className={`text-sm font-semibold tracking-tight ${isGraphPage ? 'text-slate-100' : 'text-slate-900'}`}>
+                <span className={`text-sm font-semibold tracking-tight ${isDarkPage ? 'text-slate-100' : 'text-slate-900'}`}>
                   Vocabulary Extractor
                 </span>
               </div>
@@ -87,6 +89,10 @@ export default function Layout({ children }: LayoutProps) {
                   <Network size={14} />
                   Knowledge Graph
                 </Link>
+                <Link to="/reader" className={`${navLinkClass('/reader')} flex items-center gap-1.5`}>
+                  <BookOpen size={14} />
+                  Reader
+                </Link>
               </nav>
             </div>
 
@@ -95,12 +101,12 @@ export default function Layout({ children }: LayoutProps) {
                 <button
                   onClick={() => setDropdownOpen(v => !v)}
                   className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    isGraphPage
+                    isDarkPage
                       ? 'text-slate-300 hover:bg-slate-800'
                       : 'text-slate-700 hover:bg-slate-100'
                   }`}
                 >
-                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${isGraphPage ? 'bg-slate-700 text-slate-200' : 'bg-slate-900 text-white'}`}>
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${isDarkPage ? 'bg-slate-700 text-slate-200' : 'bg-slate-900 text-white'}`}>
                     {userInitials}
                   </span>
                   <ChevronDown size={14} className={`transition-transform duration-150 ${dropdownOpen ? 'rotate-180' : ''}`} />
@@ -164,12 +170,16 @@ export default function Layout({ children }: LayoutProps) {
                 <Network size={14} />
                 Knowledge Graph
               </Link>
+              <Link to="/reader" className={`${navLinkClass('/reader')} flex items-center gap-1.5`}>
+                <BookOpen size={14} />
+                Reader
+              </Link>
             </nav>
           </div>
         </div>
       </header>
 
-      {isGraphPage ? (
+      {isDarkPage ? (
         <main className="flex-1 overflow-hidden">
           {children}
         </main>

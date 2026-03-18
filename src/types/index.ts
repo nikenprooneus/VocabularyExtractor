@@ -318,3 +318,68 @@ export interface GraphFilters {
   registerId: string;
   wordLinkId: string;
 }
+
+// ─── Reader / EPUB Types ──────────────────────────────────────────────────────
+
+export interface ReadingProgress {
+  id: string;
+  userId: string;
+  bookId: string;
+  bookTitle: string;
+  bookAuthor: string | null;
+  coverUrl: string | null;
+  cfi: string | null;
+  percentage: number | null;
+  lastOpenedAt: string;
+  createdAt: string;
+}
+
+export interface DatabaseReadingProgress {
+  id: string;
+  user_id: string;
+  book_id: string;
+  book_title: string;
+  book_author: string | null;
+  cover_url: string | null;
+  cfi: string | null;
+  percentage: number | null;
+  last_opened_at: string;
+  created_at: string;
+}
+
+export interface EpubTocItem {
+  id: string;
+  href: string;
+  label: string;
+  subitems?: EpubTocItem[];
+}
+
+export interface EpubMetadata {
+  title: string;
+  author: string;
+  identifier: string;
+  coverUrl: string | null;
+}
+
+export interface ReaderState {
+  bookId: string | null;
+  bookTitle: string;
+  bookAuthor: string;
+  coverUrl: string | null;
+  currentCfi: string | null;
+  percentage: number;
+  toc: EpubTocItem[];
+  isLoaded: boolean;
+  isLoading: boolean;
+  error: string | null;
+}
+
+// Kept here so we don't need the real type from the untyped foliate-js
+export interface _FoliateBookView extends HTMLElement {
+  open: (book: unknown) => Promise<void>;
+  goTo: (target: string) => Promise<void>;
+  next: () => Promise<void>;
+  prev: () => Promise<void>;
+  addEventListener: (type: string, handler: EventListenerOrEventListenerObject) => void;
+  removeEventListener: (type: string, handler: EventListenerOrEventListenerObject) => void;
+}
