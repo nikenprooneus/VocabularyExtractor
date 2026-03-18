@@ -374,12 +374,3 @@ export interface ReaderState {
   error: string | null;
 }
 
-// Kept here so we don't need the real type from the untyped foliate-js
-export interface _FoliateBookView extends HTMLElement {
-  open: (book: unknown) => Promise<void>;
-  goTo: (target: string) => Promise<void>;
-  next: () => Promise<void>;
-  prev: () => Promise<void>;
-  addEventListener: (type: string, handler: EventListenerOrEventListenerObject) => void;
-  removeEventListener: (type: string, handler: EventListenerOrEventListenerObject) => void;
-}

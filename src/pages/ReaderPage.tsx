@@ -5,30 +5,16 @@ import { ReaderToolbar } from '../components/reader/ReaderToolbar';
 import { TocPanel } from '../components/reader/TocPanel';
 import { BookshelfPanel } from '../components/reader/BookshelfPanel';
 
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'foliate-view': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
-    }
-  }
-}
-
 export default function ReaderPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const viewerContainerRef = useRef<HTMLDivElement>(null);
   const [isTocOpen, setIsTocOpen] = useState(false);
-  const [viewerEl, setViewerEl] = useState<HTMLElement | null>(null);
 
   const { state, setViewer, loadBook, goTo, nextPage, prevPage, closeBook } = useEpubReader();
 
-  const foliateRef = useCallback((el: HTMLElement | null) => {
-    setViewerEl(el);
-    setViewer(el);
+  const viewerRef = useCallback((el: HTMLDivElement | null) => {
+    setViewer(el as HTMLElement | null);
   }, [setViewer]);
-
-  useEffect(() => {
-    if (!viewerEl && state.isLoaded) return;
-  }, [viewerEl, state.isLoaded]);
 
   const handleOpenFilePicker = () => fileInputRef.current?.click();
 
@@ -132,10 +118,9 @@ export default function ReaderPage() {
           style={{ background: '#faf9f7' }}
         >
           <div className="flex-1 relative">
-            <foliate-view
-              ref={foliateRef as React.RefCallback<HTMLElement>}
-              class="absolute inset-0 w-full h-full"
-              style={{ display: 'block' }}
+            <div
+              ref={viewerRef}
+              className="absolute inset-0 w-full h-full"
             />
           </div>
 
