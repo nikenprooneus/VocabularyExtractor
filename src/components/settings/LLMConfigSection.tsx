@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, Trash2, Eye, EyeOff, Loader, Check, ChevronRight, Pencil } from 'lucide-react';
-import type { LLMProvider, LLMProviderProfile } from '../../types';
+import type { LLMProvider, LLMProviderProfile, LLMApiParams } from '../../types';
 import { testConnection } from '../../services/apiService';
 import toast from 'react-hot-toast';
 
@@ -108,6 +108,12 @@ function ProviderIcon({ provider, selected }: { provider: LLMProvider; selected:
   );
 }
 
+const DEFAULT_API_PARAMS: LLMApiParams = {
+  useTemperature: true,
+  useMaxTokens: true,
+  useJsonSchema: true,
+};
+
 function makeBlankProfile(): LLMProviderProfile {
   return {
     id: crypto.randomUUID(),
@@ -117,6 +123,8 @@ function makeBlankProfile(): LLMProviderProfile {
     baseURL: '',
     model: 'gpt-4.1-mini',
     isCustomModel: false,
+    maxTokens: undefined,
+    apiParams: { ...DEFAULT_API_PARAMS },
   };
 }
 
@@ -130,10 +138,22 @@ interface ProfileFormProps {
 }
 
 function ProfileForm({ profile, temperature, maxTokens, onSave, onDelete, onCancel }: ProfileFormProps) {
-  const [form, setForm] = useState<LLMProviderProfile>({ ...profile });
+  const [form, setForm] = useState<LLMProviderProfile>({
+    ...profile,
+    apiParams: profile.apiParams ?? { ...DEFAULT_API_PARAMS },
+  });
   const [showKey, setShowKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+
+  const apiParams = form.apiParams ?? DEFAULT_API_PARAMS;
+
+  const setApiParam = (key: keyof LLMApiParams, value: boolean) => {
+    setForm((f) => ({
+      ...f,
+      apiParams: { ...(f.apiParams ?? DEFAULT_API_PARAMS), [key]: value },
+    }));
+  };
 
   const providerMeta = PROVIDERS.find((p) => p.id === form.provider) ?? PROVIDERS[0];
   const isCompatible = form.provider === 'openai-compatible';
@@ -183,7 +203,8 @@ function ProfileForm({ profile, temperature, maxTokens, onSave, onDelete, onCanc
         model: form.model,
         provider: form.provider === 'openai-compatible' ? 'custom' : form.provider,
         temperature,
-        maxTokens,
+        maxTokens: form.maxTokens ?? maxTokens,
+        apiParams: form.apiParams,
       });
       toast.success('Connection successful!');
     } catch (err) {
@@ -314,6 +335,67 @@ function ProfileForm({ profile, temperature, maxTokens, onSave, onDelete, onCanc
             ))}
           </select>
         )}
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+          Max Completion Tokens
+        </label>
+        <input
+          type="number"
+          min={1}
+          max={200000}
+          value={form.maxTokens ?? ''}
+          onChange={(e) => {
+            const val = e.target.value;
+            setForm((f) => ({ ...f, maxTokens: val === '' ? undefined : Math.max(1, parseInt(val, 10)) }));
+          }}
+          placeholder={`Global default (${maxTokens})`}
+          className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        <p className="text-xs text-slate-400 mt-1">Leave blank to use the global default. Overrides per profile for models with specific limits.</p>
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+          API Parameters
+        </label>
+        <p className="text-xs text-slate-400 mb-3">Uncheck parameters your model does not support (e.g. some reasoning models reject temperature or structured output).</p>
+        <div className="space-y-2.5">
+          {([
+            { key: 'useTemperature' as const, label: 'Include temperature', desc: 'Sends the temperature value with each request' },
+            { key: 'useMaxTokens' as const, label: 'Include max tokens limit', desc: 'Sends max_completion_tokens / max_tokens with each request' },
+            { key: 'useJsonSchema' as const, label: 'Use structured JSON output', desc: 'Sends response_format / tool schema for structured extraction' },
+          ]).map(({ key, label, desc }) => (
+            <label key={key} className="flex items-start gap-3 cursor-pointer group">
+              <div className="relative mt-0.5 shrink-0">
+                <input
+                  type="checkbox"
+                  checked={apiParams[key]}
+                  onChange={(e) => setApiParam(key, e.target.checked)}
+                  className="sr-only"
+                />
+                <div
+                  className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
+                    apiParams[key]
+                      ? 'bg-blue-500 border-blue-500'
+                      : 'bg-white border-slate-300 group-hover:border-slate-400'
+                  }`}
+                >
+                  {apiParams[key] && (
+                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 8">
+                      <path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </div>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-slate-700">{label}</span>
+                <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
+              </div>
+            </label>
+          ))}
+        </div>
       </div>
 
       <div className="flex items-center gap-2 pt-2">

@@ -82,6 +82,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         baseURL: row.base_url ?? undefined,
         model: row.model,
         isCustomModel: row.is_custom_model,
+        maxTokens: row.max_tokens ?? undefined,
+        apiParams: row.api_params ?? undefined,
       }));
 
       let activeLlmProfileId = dbSettings?.active_llm_profile_id ?? '';
@@ -186,6 +188,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         baseURL: saved.base_url ?? undefined,
         model: saved.model,
         isCustomModel: saved.is_custom_model,
+        maxTokens: saved.max_tokens ?? undefined,
+        apiParams: saved.api_params ?? undefined,
       };
       setSettings((prev) => {
         const exists = prev.llmProfiles.some((p) => p.id === savedProfile.id);

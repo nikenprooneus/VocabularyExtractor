@@ -2,6 +2,12 @@ import type { Session } from '@supabase/supabase-js';
 
 export type LLMProvider = 'openai' | 'anthropic' | 'google' | 'deepseek' | 'custom' | 'openai-compatible';
 
+export interface LLMApiParams {
+  useTemperature: boolean;
+  useMaxTokens: boolean;
+  useJsonSchema: boolean;
+}
+
 export interface LLMProviderProfile {
   id: string;
   name: string;
@@ -10,6 +16,8 @@ export interface LLMProviderProfile {
   baseURL?: string;
   model: string;
   isCustomModel?: boolean;
+  maxTokens?: number;
+  apiParams?: LLMApiParams;
 }
 
 export interface OutputField {
@@ -55,6 +63,7 @@ export interface APIConfig {
   provider: LLMProvider;
   temperature: number;
   maxTokens: number;
+  apiParams?: LLMApiParams;
 }
 
 export interface DatabaseLLMProfile {
@@ -66,6 +75,8 @@ export interface DatabaseLLMProfile {
   base_url: string | null;
   model: string;
   is_custom_model: boolean;
+  max_tokens: number | null;
+  api_params: LLMApiParams | null;
   created_at: string;
   updated_at: string;
 }

@@ -75,7 +75,8 @@ export function useVocabularyGenerator(settings: Settings): VocabularyGeneratorS
     model: activeProfile?.model ?? '',
     provider: resolvedProvider as import('../types/index').LLMProvider,
     temperature: settings.temperature ?? 0.7,
-    maxTokens: settings.llmMaxTokens ?? 2000,
+    maxTokens: activeProfile?.maxTokens ?? settings.llmMaxTokens ?? 2000,
+    apiParams: activeProfile?.apiParams,
   };
 
   const isSettingsConfigured = !!(

@@ -116,6 +116,8 @@ export const upsertLLMProfile = async (
         base_url: profile.baseURL ?? null,
         model: profile.model,
         is_custom_model: profile.isCustomModel ?? false,
+        max_tokens: profile.maxTokens ?? null,
+        api_params: profile.apiParams ?? null,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'id' }

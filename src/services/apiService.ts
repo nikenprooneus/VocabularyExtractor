@@ -22,14 +22,20 @@ async function callOpenAICompatible(
   maxTokens: number,
   jsonSchema?: ApiJsonSchema
 ): Promise<string> {
+  const params = config.apiParams;
+  const useTemperature = params?.useTemperature ?? true;
+  const useMaxTokens = params?.useMaxTokens ?? true;
+  const useSchema = params?.useJsonSchema ?? true;
+
   const body: Record<string, unknown> = {
     model: config.model,
     messages,
-    temperature: config.temperature,
-    max_completion_tokens: maxTokens,
   };
 
-  if (jsonSchema) {
+  if (useTemperature) body.temperature = config.temperature;
+  if (useMaxTokens) body.max_completion_tokens = maxTokens;
+
+  if (jsonSchema && useSchema) {
     body.response_format = {
       type: 'json_schema',
       json_schema: {
@@ -64,15 +70,21 @@ async function callAnthropic(
   maxTokens: number,
   jsonSchema?: ApiJsonSchema
 ): Promise<string> {
+  const params = config.apiParams;
+  const useTemperature = params?.useTemperature ?? true;
+  const useMaxTokens = params?.useMaxTokens ?? true;
+  const useSchema = params?.useJsonSchema ?? true;
+
   const body: Record<string, unknown> = {
     model: config.model,
-    max_tokens: maxTokens,
-    temperature: config.temperature,
     system: systemMessage,
     messages: [{ role: 'user', content: userMessage }],
   };
 
-  if (jsonSchema) {
+  if (useMaxTokens) body.max_tokens = maxTokens;
+  if (useTemperature) body.temperature = config.temperature;
+
+  if (jsonSchema && useSchema) {
     body.tools = [
       {
         name: 'vocabulary_extraction',
@@ -118,12 +130,17 @@ async function callGemini(
 ): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`;
 
-  const generationConfig: Record<string, unknown> = {
-    temperature: config.temperature,
-    maxOutputTokens: maxTokens,
-  };
+  const params = config.apiParams;
+  const useTemperature = params?.useTemperature ?? true;
+  const useMaxTokens = params?.useMaxTokens ?? true;
+  const useSchema = params?.useJsonSchema ?? true;
 
-  if (jsonSchema) {
+  const generationConfig: Record<string, unknown> = {};
+
+  if (useTemperature) generationConfig.temperature = config.temperature;
+  if (useMaxTokens) generationConfig.maxOutputTokens = maxTokens;
+
+  if (jsonSchema && useSchema) {
     generationConfig.responseMimeType = 'application/json';
     generationConfig.responseSchema = jsonSchema;
   }
