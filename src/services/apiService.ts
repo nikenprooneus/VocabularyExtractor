@@ -26,7 +26,7 @@ async function callOpenAICompatible(
     model: config.model,
     messages,
     temperature: config.temperature,
-    max_tokens: maxTokens,
+    max_completion_tokens: maxTokens,
   };
 
   if (jsonSchema) {
