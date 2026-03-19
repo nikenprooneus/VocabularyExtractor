@@ -7,13 +7,12 @@ import { BookshelfPanel } from '../components/reader/BookshelfPanel';
 
 export default function ReaderPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const viewerContainerRef = useRef<HTMLDivElement>(null);
   const [isTocOpen, setIsTocOpen] = useState(false);
 
   const { state, setViewer, loadBook, goTo, nextPage, prevPage, closeBook } = useEpubReader();
 
-  const viewerRef = useCallback((el: HTMLDivElement | null) => {
-    setViewer(el as HTMLElement | null);
+  const viewerRef = useCallback((el: HTMLElement | null) => {
+    setViewer(el);
   }, [setViewer]);
 
   const handleOpenFilePicker = () => fileInputRef.current?.click();
@@ -111,14 +110,13 @@ export default function ReaderPage() {
         )}
 
         <div
-          ref={viewerContainerRef}
           className={`flex-1 flex flex-col overflow-hidden transition-opacity duration-300 ${
             state.isLoaded && !state.isLoading ? 'opacity-100' : 'opacity-0 pointer-events-none absolute inset-0'
           }`}
           style={{ background: '#faf9f7' }}
         >
           <div className="flex-1 relative">
-            <div
+            <foliate-view
               ref={viewerRef}
               className="absolute inset-0 w-full h-full"
             />
