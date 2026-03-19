@@ -23,6 +23,20 @@ const initialState: ReaderState = {
   error: null,
 };
 
+function coerceMeta(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) {
+    return value
+      .map(v => (typeof v === 'string' ? v : typeof v === 'object' && v !== null && 'name' in v ? String((v as { name: unknown }).name) : ''))
+      .filter(Boolean)
+      .join(', ');
+  }
+  if (typeof value === 'object' && value !== null && 'name' in value) {
+    return String((value as { name: unknown }).name);
+  }
+  return '';
+}
+
 function flattenToc(items: FoliateBookTocItem[], depth = 0): EpubTocItem[] {
   return items.flatMap(item => {
     const node: EpubTocItem = {
@@ -91,9 +105,9 @@ export function useEpubReader() {
         await foliateEl.open(file);
 
         const meta = foliateEl.book?.metadata ?? {};
-        const rawTitle = meta.title?.trim() || file.name.replace(/\.epub$/i, '');
-        const rawAuthor = meta.author?.trim() || '';
-        const rawIdentifier = meta.identifier?.trim() || '';
+        const rawTitle = coerceMeta(meta.title).trim() || file.name.replace(/\.epub$/i, '');
+        const rawAuthor = coerceMeta(meta.author).trim();
+        const rawIdentifier = coerceMeta(meta.identifier).trim();
 
         const tocItems = foliateEl.book?.toc ? flattenToc(foliateEl.book.toc) : [];
 

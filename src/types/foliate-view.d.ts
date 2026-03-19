@@ -8,9 +8,9 @@ interface FoliateRelocateEvent extends CustomEvent {
 }
 
 interface FoliateBookMetadata {
-  title?: string;
-  author?: string;
-  identifier?: string;
+  title?: string | string[] | unknown;
+  author?: string | string[] | unknown;
+  identifier?: string | string[] | unknown;
   cover?: string;
 }
 
