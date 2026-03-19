@@ -328,6 +328,8 @@ export interface ReadingProgress {
   bookTitle: string;
   bookAuthor: string | null;
   coverUrl: string | null;
+  fileUrl: string | null;
+  fileName: string | null;
   cfi: string | null;
   percentage: number | null;
   lastOpenedAt: string;
@@ -341,6 +343,8 @@ export interface DatabaseReadingProgress {
   book_title: string;
   book_author: string | null;
   cover_url: string | null;
+  file_url: string | null;
+  file_name: string | null;
   cfi: string | null;
   percentage: number | null;
   last_opened_at: string;

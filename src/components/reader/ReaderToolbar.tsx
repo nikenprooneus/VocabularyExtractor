@@ -1,4 +1,5 @@
-import { BookOpen, ChevronLeft, ChevronRight, List, X, Upload, RotateCcw } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight, List, Upload, RotateCcw, AlignJustify, BookMarked } from 'lucide-react';
+import type { ReadMode } from '../../hooks/useEpubReader';
 
 interface ReaderToolbarProps {
   title: string;
@@ -6,11 +7,13 @@ interface ReaderToolbarProps {
   percentage: number;
   isLoaded: boolean;
   isTocOpen: boolean;
+  readMode: ReadMode;
   onToggleToc: () => void;
   onPrev: () => void;
   onNext: () => void;
   onClose: () => void;
   onOpenFilePicker: () => void;
+  onToggleReadMode: () => void;
 }
 
 export function ReaderToolbar({
@@ -19,11 +22,13 @@ export function ReaderToolbar({
   percentage,
   isLoaded,
   isTocOpen,
+  readMode,
   onToggleToc,
   onPrev,
   onNext,
   onClose,
   onOpenFilePicker,
+  onToggleReadMode,
 }: ReaderToolbarProps) {
   const pct = Math.round(percentage * 100);
 
@@ -89,6 +94,19 @@ export function ReaderToolbar({
       )}
 
       <div className="flex items-center gap-1 flex-shrink-0">
+        {isLoaded && (
+          <button
+            onClick={onToggleReadMode}
+            title={readMode === 'paginated' ? 'Switch to scroll mode' : 'Switch to paginated mode'}
+            className={`p-1.5 rounded transition-colors ${
+              readMode === 'scrolled'
+                ? 'bg-[#3a3835] text-[#c9a96e]'
+                : 'text-[#8a8680] hover:text-[#e8e4de] hover:bg-[#2e2c29]'
+            }`}
+          >
+            {readMode === 'paginated' ? <AlignJustify size={15} /> : <BookMarked size={15} />}
+          </button>
+        )}
         <button
           onClick={onOpenFilePicker}
           title="Open EPUB file"

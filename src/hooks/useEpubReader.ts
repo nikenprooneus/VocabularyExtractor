@@ -4,11 +4,15 @@ import {
   fetchReadingProgressByBookId,
   upsertReadingProgress,
   computeBookId,
+  uploadEpubToStorage,
 } from '../services/readerService';
+import { cacheEpubBlob } from '../services/epubCacheService';
 import { ensureFoliateLoaded } from '../utils/foliateLoader';
 import type { EpubTocItem, ReaderState } from '../types';
 
 const PROGRESS_SAVE_DEBOUNCE_MS = 1500;
+
+export type ReadMode = 'paginated' | 'scrolled';
 
 const initialState: ReaderState = {
   bookId: null,
@@ -54,6 +58,7 @@ function flattenToc(items: FoliateBookTocItem[], depth = 0): EpubTocItem[] {
 export function useEpubReader() {
   const { user } = useAuth();
   const [state, setState] = useState<ReaderState>(initialState);
+  const [readMode, setReadModeState] = useState<ReadMode>('paginated');
   const foliateViewRef = useRef<HTMLElement | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentBookIdRef = useRef<string | null>(null);
@@ -87,6 +92,20 @@ export function useEpubReader() {
     }
   }, []);
 
+  const applyReadMode = useCallback((mode: ReadMode) => {
+    if (!foliateViewRef.current) return;
+    try {
+      (foliateViewRef.current as unknown as FoliateViewElement & { renderer: { setAttribute: (k: string, v: string) => void } }).renderer?.setAttribute('flow', mode === 'paginated' ? 'paginated' : 'scrolled');
+    } catch {
+      // renderer may not be ready yet; ignore
+    }
+  }, []);
+
+  const setReadMode = useCallback((mode: ReadMode) => {
+    setReadModeState(mode);
+    applyReadMode(mode);
+  }, [applyReadMode]);
+
   const loadBook = useCallback(
     async (file: File) => {
       if (!foliateViewRef.current || !user) return;
@@ -102,6 +121,13 @@ export function useEpubReader() {
         const bookId = await computeBookId(file);
         currentBookIdRef.current = bookId;
 
+        // Cache the blob in IndexedDB (offline-first)
+        try {
+          await cacheEpubBlob(bookId, file);
+        } catch {
+          // cache failure is non-fatal
+        }
+
         await foliateEl.open(file);
 
         const meta = foliateEl.book?.metadata ?? {};
@@ -113,6 +139,15 @@ export function useEpubReader() {
 
         const resolvedBookId = rawIdentifier !== '' ? rawIdentifier : bookId;
         currentBookIdRef.current = resolvedBookId;
+
+        // Re-cache under the resolved stable ID if it differs
+        if (resolvedBookId !== bookId) {
+          try {
+            await cacheEpubBlob(resolvedBookId, file);
+          } catch {
+            // non-fatal
+          }
+        }
 
         const onRelocate = (e: Event) => {
           const detail = (e as CustomEvent<FoliateRelocateDetail>).detail;
@@ -140,14 +175,24 @@ export function useEpubReader() {
           isLoading: false,
         }));
 
+        // Upload to Supabase Storage in the background (non-blocking)
+        let resolvedFileUrl: string | null = null;
+        try {
+          resolvedFileUrl = await uploadEpubToStorage(user.id, resolvedBookId, file);
+        } catch {
+          // non-fatal
+        }
+
         try {
           await upsertReadingProgress(user.id, resolvedBookId, {
             bookTitle: rawTitle,
             bookAuthor: rawAuthor,
             coverUrl: null,
+            fileUrl: resolvedFileUrl,
+            fileName: file.name,
           });
         } catch {
-          // Persist failure is non-fatal
+          // non-fatal
         }
 
         let startCfi: string | undefined;
@@ -158,17 +203,20 @@ export function useEpubReader() {
             setState(s => ({ ...s, currentCfi: saved.cfi, percentage: saved.percentage ?? 0 }));
           }
         } catch {
-          // Restore failure is non-fatal
+          // non-fatal
         }
 
         foliateEl.init({ lastLocation: startCfi ?? '' });
+
+        // Apply current read mode after init
+        applyReadMode(readMode);
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Failed to open EPUB.';
         setState(s => ({ ...s, isLoading: false, error: msg }));
         removeRelocateListener();
       }
     },
-    [user, scheduleSave, removeRelocateListener]
+    [user, scheduleSave, removeRelocateListener, applyReadMode, readMode]
   );
 
   const goTo = useCallback((cfiOrHref: string) => {
@@ -176,7 +224,7 @@ export function useEpubReader() {
     try {
       (foliateViewRef.current as unknown as FoliateViewElement).goTo(cfiOrHref);
     } catch {
-      // Navigation failure is non-fatal
+      // non-fatal
     }
   }, [state.isLoaded]);
 
@@ -222,6 +270,8 @@ export function useEpubReader() {
 
   return {
     state,
+    readMode,
+    setReadMode,
     setViewer,
     loadBook,
     goTo,

@@ -9,7 +9,7 @@ export default function ReaderPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isTocOpen, setIsTocOpen] = useState(false);
 
-  const { state, setViewer, loadBook, goTo, nextPage, prevPage, closeBook } = useEpubReader();
+  const { state, readMode, setReadMode, setViewer, loadBook, goTo, nextPage, prevPage, closeBook } = useEpubReader();
 
   const viewerRef = useCallback((el: HTMLElement | null) => {
     setViewer(el);
@@ -31,6 +31,10 @@ export default function ReaderPage() {
   const handleClose = async () => {
     setIsTocOpen(false);
     await closeBook();
+  };
+
+  const handleToggleReadMode = () => {
+    setReadMode(readMode === 'paginated' ? 'scrolled' : 'paginated');
   };
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -63,11 +67,13 @@ export default function ReaderPage() {
         percentage={state.percentage}
         isLoaded={state.isLoaded}
         isTocOpen={isTocOpen}
+        readMode={readMode}
         onToggleToc={() => setIsTocOpen(v => !v)}
         onPrev={prevPage}
         onNext={nextPage}
         onClose={handleClose}
         onOpenFilePicker={handleOpenFilePicker}
+        onToggleReadMode={handleToggleReadMode}
       />
 
       <div className="flex-1 flex overflow-hidden relative">
@@ -122,33 +128,35 @@ export default function ReaderPage() {
             />
           </div>
 
-          <div className="flex-shrink-0 flex items-center justify-between px-4 py-2 bg-[#faf9f7] border-t border-[#e8e4de]">
-            <button
-              onClick={prevPage}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-[#8a8680] hover:text-[#3a3835] hover:bg-[#ede9e3] transition-colors"
-            >
-              <ChevronLeft size={14} />
-              Previous
-            </button>
-            <div className="flex items-center gap-2">
-              <div className="w-32 h-1 bg-[#e8e4de] rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[#c9a96e] rounded-full transition-all duration-500"
-                  style={{ width: `${Math.round(state.percentage * 100)}%` }}
-                />
+          {readMode === 'paginated' && (
+            <div className="flex-shrink-0 flex items-center justify-between px-4 py-2 bg-[#faf9f7] border-t border-[#e8e4de]">
+              <button
+                onClick={prevPage}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-[#8a8680] hover:text-[#3a3835] hover:bg-[#ede9e3] transition-colors"
+              >
+                <ChevronLeft size={14} />
+                Previous
+              </button>
+              <div className="flex items-center gap-2">
+                <div className="w-32 h-1 bg-[#e8e4de] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-[#c9a96e] rounded-full transition-all duration-500"
+                    style={{ width: `${Math.round(state.percentage * 100)}%` }}
+                  />
+                </div>
+                <span className="text-[10px] text-[#8a8680] w-8">
+                  {Math.round(state.percentage * 100)}%
+                </span>
               </div>
-              <span className="text-[10px] text-[#8a8680] w-8">
-                {Math.round(state.percentage * 100)}%
-              </span>
+              <button
+                onClick={nextPage}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-[#8a8680] hover:text-[#3a3835] hover:bg-[#ede9e3] transition-colors"
+              >
+                Next
+                <ChevronRight size={14} />
+              </button>
             </div>
-            <button
-              onClick={nextPage}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-[#8a8680] hover:text-[#3a3835] hover:bg-[#ede9e3] transition-colors"
-            >
-              Next
-              <ChevronRight size={14} />
-            </button>
-          </div>
+          )}
         </div>
       </div>
     </div>

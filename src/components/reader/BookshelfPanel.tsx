@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Upload, BookOpen, Trash2, Clock } from 'lucide-react';
+import { Upload, BookOpen, Trash2, Clock, Loader2, CloudOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { fetchAllReadingProgress, deleteReadingProgress } from '../../services/readerService';
+import {
+  fetchAllReadingProgress,
+  deleteReadingProgress,
+  resolveEpubFile,
+} from '../../services/readerService';
+import { deleteCachedEpubBlob } from '../../services/epubCacheService';
 import type { ReadingProgress } from '../../types';
 
 const SAMPLE_BOOK = {
@@ -22,6 +27,7 @@ export function BookshelfPanel({ onOpenFile }: BookshelfPanelProps) {
   const [library, setLibrary] = useState<ReadingProgress[]>([]);
   const [loadingLibrary, setLoadingLibrary] = useState(true);
   const [loadingSample, setLoadingSample] = useState(false);
+  const [openingBookId, setOpeningBookId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadLibrary = useCallback(async () => {
@@ -80,10 +86,34 @@ export function BookshelfPanel({ onOpenFile }: BookshelfPanelProps) {
     }
   };
 
-  const handleDelete = async (bookId: string) => {
+  const handleOpenFromLibrary = async (book: ReadingProgress) => {
+    if (openingBookId) return;
+    setOpeningBookId(book.bookId);
+    setError(null);
+    try {
+      const file = await resolveEpubFile(
+        book.bookId,
+        book.fileName ?? `${book.bookTitle}.epub`,
+        book.fileUrl
+      );
+      if (file) {
+        onOpenFile(file);
+      } else {
+        setError(`Could not load "${book.bookTitle}". The file is not cached locally and no cloud copy is available. Please re-upload the EPUB.`);
+      }
+    } catch {
+      setError(`Failed to open "${book.bookTitle}". Please re-upload the EPUB file.`);
+    } finally {
+      setOpeningBookId(null);
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, bookId: string) => {
+    e.stopPropagation();
     if (!user) return;
     try {
       await deleteReadingProgress(user.id, bookId);
+      await deleteCachedEpubBlob(bookId).catch(() => {});
       setLibrary(prev => prev.filter(b => b.bookId !== bookId));
     } catch {
       // Non-fatal
@@ -164,39 +194,59 @@ export function BookshelfPanel({ onOpenFile }: BookshelfPanelProps) {
             Recent Books
           </h3>
           <ul className="space-y-2">
-            {library.map(book => (
-              <li
-                key={book.bookId}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#1e1c1a] border border-[#2e2c29] hover:border-[#3a3835] transition-colors group"
-              >
-                <div className="w-8 h-10 rounded bg-[#2e2c29] flex items-center justify-center flex-shrink-0 overflow-hidden">
-                  {book.coverUrl ? (
-                    <img src={book.coverUrl} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <BookOpen size={14} className="text-[#6b6762]" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-[#c8c4be] truncate">{book.bookTitle}</p>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <Clock size={9} className="text-[#4e4c49]" />
-                    <p className="text-[10px] text-[#4e4c49]">{formatDate(book.lastOpenedAt)}</p>
-                    {book.percentage !== null && (
-                      <span className="text-[10px] text-[#4e4c49]">
-                        · {Math.round(book.percentage * 100)}%
-                      </span>
+            {library.map(book => {
+              const isOpening = openingBookId === book.bookId;
+              const hasSource = !!book.fileUrl || !!book.fileName;
+
+              return (
+                <li
+                  key={book.bookId}
+                  onClick={() => handleOpenFromLibrary(book)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#1e1c1a] border border-[#2e2c29] transition-colors group cursor-pointer ${
+                    openingBookId ? 'opacity-60 pointer-events-none' : 'hover:border-[#c9a96e]/40 hover:bg-[#252320]'
+                  }`}
+                >
+                  <div className="w-8 h-10 rounded bg-[#2e2c29] flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {book.coverUrl ? (
+                      <img src={book.coverUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <BookOpen size={14} className="text-[#6b6762]" />
                     )}
                   </div>
-                </div>
-                <button
-                  onClick={() => handleDelete(book.bookId)}
-                  className="p-1.5 rounded text-[#4e4c49] hover:text-red-400 hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100"
-                  title="Remove from library"
-                >
-                  <Trash2 size={12} />
-                </button>
-              </li>
-            ))}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-[#c8c4be] truncate">{book.bookTitle}</p>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <Clock size={9} className="text-[#4e4c49]" />
+                      <p className="text-[10px] text-[#4e4c49]">{formatDate(book.lastOpenedAt)}</p>
+                      {book.percentage !== null && (
+                        <span className="text-[10px] text-[#4e4c49]">
+                          · {Math.round(book.percentage * 100)}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {!hasSource && (
+                      <span title="No cloud copy — re-upload required" className="p-1">
+                        <CloudOff size={11} className="text-[#4e4c49]" />
+                      </span>
+                    )}
+                    {isOpening ? (
+                      <Loader2 size={14} className="text-[#c9a96e] animate-spin" />
+                    ) : (
+                      <button
+                        onClick={(e) => handleDelete(e, book.bookId)}
+                        className="p-1.5 rounded text-[#4e4c49] hover:text-red-400 hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Remove from library"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
