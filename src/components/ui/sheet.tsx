@@ -70,15 +70,16 @@ function SheetContent({ side = 'right', className, children }: SheetContentProps
   return (
     <>
       <div
-        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 z-50 bg-black/70"
         onClick={() => onOpenChange(false)}
       />
       <div
         className={cn(
-          'fixed z-50 bg-[#16140f] text-foreground shadow-xl transition ease-in-out',
+          'fixed z-50 isolate opacity-100 bg-[#16140f] text-foreground shadow-xl transition ease-in-out',
           slideClasses[side],
           className
         )}
+        style={{ backgroundColor: '#16140f', opacity: 1 }}
       >
         <button
           onClick={() => onOpenChange(false)}
