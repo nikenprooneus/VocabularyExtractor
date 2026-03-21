@@ -243,7 +243,8 @@ export default function ReaderPage() {
 
           <div className="flex-1 overflow-hidden">
             <ReactReader
-              url={bookUrl}
+              key={state.bookId ?? undefined}
+              url={bookUrl!}
               location={location}
               locationChanged={onLocationChanged}
               getRendition={getRendition}

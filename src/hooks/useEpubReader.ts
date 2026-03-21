@@ -44,7 +44,7 @@ export function useEpubReader() {
   const { user } = useAuth();
   const [state, setState] = useState<ReaderState>(initialState);
   const [location, setLocation] = useState<string | number>(0);
-  const [bookUrl, setBookUrl] = useState<string | null>(null);
+  const [bookBuffer, setBookBuffer] = useState<ArrayBuffer | null>(null);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
   const [activeAnnotation, setActiveAnnotation] = useState<{ annotation: Annotation } | null>(null);
@@ -54,7 +54,7 @@ export function useEpubReader() {
   const currentBookIdRef = useRef<string | null>(null);
   const currentCfiRef = useRef<string | null>(null);
   const currentPercentageRef = useRef<number>(0);
-  const bookBlobUrlRef = useRef<string | null>(null);
+  const pendingCfiRef = useRef<string | null>(null);
   const annotationsRef = useRef<Annotation[]>([]);
 
   useEffect(() => {
@@ -152,10 +152,22 @@ export function useEpubReader() {
         setState(s => ({ ...s, percentage: pct }));
       });
 
-      const existing = annotationsRef.current;
-      if (existing.length > 0) {
-        loadAnnotations(rendition, existing);
-      }
+      rendition.on('rendered', () => {
+        const savedCfi = pendingCfiRef.current;
+        if (savedCfi) {
+          pendingCfiRef.current = null;
+          try {
+            rendition.display(savedCfi);
+          } catch {
+            // non-fatal — fall back to start of book
+          }
+        }
+
+        const existing = annotationsRef.current;
+        if (existing.length > 0) {
+          loadAnnotations(rendition, existing);
+        }
+      });
     },
     [loadAnnotations]
   );
@@ -260,16 +272,14 @@ export function useEpubReader() {
       if (!user) return;
 
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      if (bookBlobUrlRef.current) {
-        URL.revokeObjectURL(bookBlobUrlRef.current);
-        bookBlobUrlRef.current = null;
-      }
 
       setState(s => ({ ...s, isLoading: true, error: null }));
+      setBookBuffer(null);
       setAnnotations([]);
       setPendingSelection(null);
       setActiveAnnotation(null);
       renditionRef.current = null;
+      pendingCfiRef.current = null;
 
       try {
         const bookId = await computeBookId(file);
@@ -281,8 +291,7 @@ export function useEpubReader() {
           // non-fatal
         }
 
-        const blobUrl = URL.createObjectURL(file);
-        bookBlobUrlRef.current = blobUrl;
+        const buffer = await file.arrayBuffer();
 
         const existingAnnotations = await fetchAnnotationsForBook(user.id, bookId);
         setAnnotations(existingAnnotations);
@@ -309,11 +318,10 @@ export function useEpubReader() {
           // non-fatal
         }
 
-        let startLocation: string | number = 0;
         try {
           const saved = await fetchReadingProgressByBookId(user.id, bookId);
           if (saved?.cfi) {
-            startLocation = saved.cfi;
+            pendingCfiRef.current = saved.cfi;
             currentCfiRef.current = saved.cfi;
             currentPercentageRef.current = saved.percentage ?? 0;
             setState(s => ({ ...s, currentCfi: saved.cfi, percentage: saved.percentage ?? 0 }));
@@ -322,8 +330,8 @@ export function useEpubReader() {
           // non-fatal
         }
 
-        setLocation(startLocation);
-        setBookUrl(blobUrl);
+        setLocation(0);
+        setBookBuffer(buffer);
 
         setState(s => ({
           ...s,
@@ -358,16 +366,12 @@ export function useEpubReader() {
       }
     }
 
-    if (bookBlobUrlRef.current) {
-      URL.revokeObjectURL(bookBlobUrlRef.current);
-      bookBlobUrlRef.current = null;
-    }
-
     renditionRef.current = null;
     currentBookIdRef.current = null;
     currentCfiRef.current = null;
     currentPercentageRef.current = 0;
-    setBookUrl(null);
+    pendingCfiRef.current = null;
+    setBookBuffer(null);
     setLocation(0);
     setAnnotations([]);
     setPendingSelection(null);
@@ -378,14 +382,13 @@ export function useEpubReader() {
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      if (bookBlobUrlRef.current) URL.revokeObjectURL(bookBlobUrlRef.current);
     };
   }, []);
 
   return {
     state,
     location,
-    bookUrl,
+    bookUrl: bookBuffer,
     onLocationChanged,
     getRendition,
     renditionRef,
