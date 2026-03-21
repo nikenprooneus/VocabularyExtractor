@@ -1,4 +1,5 @@
 import * as React from 'react';
+import * as ReactDOM from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -67,19 +68,19 @@ function SheetContent({ side = 'right', className, children }: SheetContentProps
     bottom: 'inset-x-0 bottom-0 w-full border-t border-border',
   };
 
-  return (
+  return ReactDOM.createPortal(
     <>
       <div
-        className="fixed inset-0 z-50 bg-black/70"
+        className="fixed inset-0 z-[200] bg-black/70"
         onClick={() => onOpenChange(false)}
       />
       <div
         className={cn(
-          'fixed z-50 isolate opacity-100 bg-[#16140f] text-foreground shadow-xl transition ease-in-out',
+          'fixed z-[201] text-foreground shadow-xl transition ease-in-out',
           slideClasses[side],
           className
         )}
-        style={{ backgroundColor: '#16140f', opacity: 1 }}
+        style={{ backgroundColor: 'hsl(30 10% 12%)', opacity: 1 }}
       >
         <button
           onClick={() => onOpenChange(false)}
@@ -90,7 +91,8 @@ function SheetContent({ side = 'right', className, children }: SheetContentProps
         </button>
         {children}
       </div>
-    </>
+    </>,
+    document.body
   );
 }
 

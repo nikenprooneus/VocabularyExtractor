@@ -59,7 +59,7 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className={cn(isFullBleed ? 'h-screen flex flex-col overflow-hidden' : 'min-h-screen', 'bg-background')}>
-      <header className="sticky top-0 z-50 flex-shrink-0 border-b border-border bg-card/80 backdrop-blur-sm">
+      <header className="sticky top-0 z-50 flex-shrink-0 border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-14 gap-4">
             <Link to="/" className="flex items-center gap-2.5 flex-shrink-0 mr-2">

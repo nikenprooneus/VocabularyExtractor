@@ -81,10 +81,11 @@ function DropdownMenuContent({ className, align = 'end', children }: DropdownMen
     <div
       ref={ref}
       className={cn(
-        'absolute mt-1.5 z-50 min-w-[10rem] overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-lg py-1',
+        'absolute mt-1.5 z-50 min-w-[10rem] overflow-hidden rounded-md border border-border text-popover-foreground shadow-lg py-1',
         alignClass,
         className
       )}
+      style={{ backgroundColor: 'hsl(30 10% 11%)' }}
     >
       {children}
     </div>
