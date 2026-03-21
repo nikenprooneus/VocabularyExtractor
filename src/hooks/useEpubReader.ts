@@ -8,11 +8,25 @@ import {
 } from '../services/readerService';
 import { cacheEpubBlob } from '../services/epubCacheService';
 import { ensureFoliateLoaded } from '../utils/foliateLoader';
-import type { EpubTocItem, ReaderState } from '../types';
+import {
+  fetchAnnotationsForBook,
+  createAnnotation,
+  updateAnnotationNote,
+  updateAnnotationColor,
+  deleteAnnotation,
+} from '../services/annotationService';
+import type { EpubTocItem, ReaderState, Annotation, AnnotationColor, PendingSelection } from '../types';
 
 const PROGRESS_SAVE_DEBOUNCE_MS = 1500;
 
 export type ReadMode = 'paginated' | 'scrolled';
+
+const HIGHLIGHT_COLORS: Record<AnnotationColor, string> = {
+  yellow: 'rgba(253, 224, 71, 0.45)',
+  green:  'rgba(134, 239, 172, 0.45)',
+  blue:   'rgba(147, 197, 253, 0.45)',
+  pink:   'rgba(249, 168, 212, 0.45)',
+};
 
 const initialState: ReaderState = {
   bookId: null,
@@ -31,7 +45,13 @@ function coerceMeta(value: unknown): string {
   if (typeof value === 'string') return value;
   if (Array.isArray(value)) {
     return value
-      .map(v => (typeof v === 'string' ? v : typeof v === 'object' && v !== null && 'name' in v ? String((v as { name: unknown }).name) : ''))
+      .map(v =>
+        typeof v === 'string'
+          ? v
+          : typeof v === 'object' && v !== null && 'name' in v
+          ? String((v as { name: unknown }).name)
+          : ''
+      )
       .filter(Boolean)
       .join(', ');
   }
@@ -55,16 +75,44 @@ function flattenToc(items: FoliateBookTocItem[], depth = 0): EpubTocItem[] {
   });
 }
 
+function drawAnnotations(
+  foliateEl: FoliateViewElement,
+  annotations: Annotation[]
+) {
+  for (const annotation of annotations) {
+    try {
+      (foliateEl as unknown as {
+        addAnnotation: (a: { value: string; color: string }) => void;
+      }).addAnnotation({
+        value: annotation.cfi,
+        color: HIGHLIGHT_COLORS[annotation.color],
+      });
+    } catch {
+      // addAnnotation may not be available on every build of foliate-js
+    }
+  }
+}
+
 export function useEpubReader() {
   const { user } = useAuth();
   const [state, setState] = useState<ReaderState>(initialState);
   const [readMode, setReadModeState] = useState<ReadMode>('paginated');
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
+  const [activeAnnotation, setActiveAnnotation] = useState<{ annotation: Annotation; rect: DOMRect } | null>(null);
+
   const foliateViewRef = useRef<HTMLElement | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentBookIdRef = useRef<string | null>(null);
   const currentCfiRef = useRef<string | null>(null);
   const currentPercentageRef = useRef<number>(0);
   const relocateListenerRef = useRef<((e: Event) => void) | null>(null);
+  const selectionCleanupRef = useRef<(() => void) | null>(null);
+  const annotationsRef = useRef<Annotation[]>([]);
+
+  useEffect(() => {
+    annotationsRef.current = annotations;
+  }, [annotations]);
 
   const setViewer = useCallback((el: HTMLElement | null) => {
     foliateViewRef.current = el;
@@ -78,7 +126,7 @@ export function useEpubReader() {
         try {
           await upsertReadingProgress(user.id, bookId, { cfi, percentage });
         } catch {
-          // Silent – progress save failures shouldn't interrupt reading
+          // silent
         }
       }, PROGRESS_SAVE_DEBOUNCE_MS);
     },
@@ -95,16 +143,186 @@ export function useEpubReader() {
   const applyReadMode = useCallback((mode: ReadMode) => {
     if (!foliateViewRef.current) return;
     try {
-      (foliateViewRef.current as unknown as FoliateViewElement & { renderer: { setAttribute: (k: string, v: string) => void } }).renderer?.setAttribute('flow', mode === 'paginated' ? 'paginated' : 'scrolled');
+      (
+        foliateViewRef.current as unknown as FoliateViewElement & {
+          renderer: { setAttribute: (k: string, v: string) => void };
+        }
+      ).renderer?.setAttribute('flow', mode === 'paginated' ? 'paginated' : 'scrolled');
     } catch {
-      // renderer may not be ready yet; ignore
+      // renderer may not be ready yet
     }
   }, []);
 
-  const setReadMode = useCallback((mode: ReadMode) => {
-    setReadModeState(mode);
-    applyReadMode(mode);
-  }, [applyReadMode]);
+  const setReadMode = useCallback(
+    (mode: ReadMode) => {
+      setReadModeState(mode);
+      applyReadMode(mode);
+    },
+    [applyReadMode]
+  );
+
+  // ─── Selection listener injection ───────────────────────────────────────────
+
+  const injectSelectionListeners = useCallback(() => {
+    if (!foliateViewRef.current) return;
+
+    if (selectionCleanupRef.current) {
+      selectionCleanupRef.current();
+      selectionCleanupRef.current = null;
+    }
+
+    const foliateEl = foliateViewRef.current;
+
+    const handleLoad = (e: Event) => {
+      const doc = (e as CustomEvent<{ doc: Document; index: number }>).detail?.doc;
+      if (!doc) return;
+
+      const handlePointerUp = () => {
+        const sel = doc.getSelection();
+        if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+
+        const range = sel.getRangeAt(0);
+        const text = sel.toString().trim();
+        if (!text) return;
+
+        let cfi: string | null = null;
+        try {
+          cfi = (
+            foliateEl as unknown as { getCFI: (index: number, range: Range) => string }
+          ).getCFI(
+            (e as CustomEvent<{ doc: Document; index: number }>).detail.index,
+            range
+          );
+        } catch {
+          // getCFI may not exist on all versions
+        }
+
+        if (!cfi) return;
+
+        const iframeRect = foliateEl.getBoundingClientRect();
+        const localRect = range.getBoundingClientRect();
+
+        const viewportRect = new DOMRect(
+          iframeRect.left + localRect.left,
+          iframeRect.top + localRect.top,
+          localRect.width,
+          localRect.height
+        );
+
+        setPendingSelection({ cfi, text, rect: viewportRect });
+        setActiveAnnotation(null);
+      };
+
+      doc.addEventListener('pointerup', handlePointerUp);
+
+      const handleSelectionChange = () => {
+        const sel = doc.getSelection();
+        if (sel && sel.isCollapsed) {
+          setPendingSelection(null);
+        }
+      };
+      doc.addEventListener('selectionchange', handleSelectionChange);
+
+      const prevCleanup = selectionCleanupRef.current;
+      selectionCleanupRef.current = () => {
+        if (prevCleanup) prevCleanup();
+        doc.removeEventListener('pointerup', handlePointerUp);
+        doc.removeEventListener('selectionchange', handleSelectionChange);
+      };
+    };
+
+    foliateEl.addEventListener('load', handleLoad as EventListener);
+
+    const existingCleanup = selectionCleanupRef.current as (() => void) | null;
+    selectionCleanupRef.current = () => {
+      if (typeof existingCleanup === 'function') existingCleanup();
+      foliateEl.removeEventListener('load', handleLoad as EventListener);
+    };
+  }, []);
+
+  // ─── Annotation actions ──────────────────────────────────────────────────────
+
+  const handleHighlight = useCallback(
+    async (color: AnnotationColor) => {
+      if (!pendingSelection || !user || !currentBookIdRef.current) return;
+
+      const { cfi, text } = pendingSelection;
+      setPendingSelection(null);
+
+      const bookId = currentBookIdRef.current;
+      const annotation = await createAnnotation(user.id, bookId, cfi, text, color);
+
+      setAnnotations(prev => [...prev, annotation]);
+
+      if (foliateViewRef.current) {
+        try {
+          (foliateViewRef.current as unknown as {
+            addAnnotation: (a: { value: string; color: string }) => void;
+          }).addAnnotation({
+            value: cfi,
+            color: HIGHLIGHT_COLORS[color],
+          });
+        } catch { /* ignore */ }
+      }
+    },
+    [pendingSelection, user]
+  );
+
+  const handleAnnotationColorChange = useCallback(
+    async (color: AnnotationColor) => {
+      if (!activeAnnotation) return;
+      const { annotation } = activeAnnotation;
+
+      const updated = await updateAnnotationColor(annotation, color);
+      setAnnotations(prev => prev.map(a => (a.id === updated.id ? updated : a)));
+      setActiveAnnotation({ annotation: updated, rect: activeAnnotation.rect });
+
+      if (foliateViewRef.current) {
+        try {
+          const el = foliateViewRef.current as unknown as {
+            addAnnotation: (a: { value: string; color: string }) => void;
+          };
+          el.addAnnotation({ value: updated.cfi, color: HIGHLIGHT_COLORS[color] });
+        } catch { /* ignore */ }
+      }
+    },
+    [activeAnnotation]
+  );
+
+  const handleAnnotationNoteChange = useCallback(
+    async (note: string) => {
+      if (!activeAnnotation) return;
+      const { annotation } = activeAnnotation;
+      const updated = await updateAnnotationNote(annotation, note);
+      setAnnotations(prev => prev.map(a => (a.id === updated.id ? updated : a)));
+      setActiveAnnotation({ annotation: updated, rect: activeAnnotation.rect });
+    },
+    [activeAnnotation]
+  );
+
+  const handleAnnotationDelete = useCallback(async () => {
+    if (!activeAnnotation) return;
+    const { annotation } = activeAnnotation;
+    setActiveAnnotation(null);
+
+    await deleteAnnotation(annotation.id);
+    setAnnotations(prev => prev.filter(a => a.id !== annotation.id));
+
+    if (foliateViewRef.current) {
+      try {
+        (foliateViewRef.current as unknown as {
+          removeAnnotation: (a: { value: string }) => void;
+        }).removeAnnotation({ value: annotation.cfi });
+      } catch { /* ignore */ }
+    }
+  }, [activeAnnotation]);
+
+  const dismissPopover = useCallback(() => {
+    setPendingSelection(null);
+    setActiveAnnotation(null);
+  }, []);
+
+  // ─── Load book ───────────────────────────────────────────────────────────────
 
   const loadBook = useCallback(
     async (file: File) => {
@@ -112,21 +330,20 @@ export function useEpubReader() {
 
       removeRelocateListener();
       setState(s => ({ ...s, isLoading: true, error: null }));
+      setAnnotations([]);
+      setPendingSelection(null);
+      setActiveAnnotation(null);
 
       try {
         await ensureFoliateLoaded();
 
         const foliateEl = foliateViewRef.current as unknown as FoliateViewElement;
-
         const bookId = await computeBookId(file);
         currentBookIdRef.current = bookId;
 
-        // Cache the blob in IndexedDB (offline-first)
         try {
           await cacheEpubBlob(bookId, file);
-        } catch {
-          // cache failure is non-fatal
-        }
+        } catch { /* non-fatal */ }
 
         await foliateEl.open(file);
 
@@ -140,13 +357,10 @@ export function useEpubReader() {
         const resolvedBookId = rawIdentifier !== '' ? rawIdentifier : bookId;
         currentBookIdRef.current = resolvedBookId;
 
-        // Re-cache under the resolved stable ID if it differs
         if (resolvedBookId !== bookId) {
           try {
             await cacheEpubBlob(resolvedBookId, file);
-          } catch {
-            // non-fatal
-          }
+          } catch { /* non-fatal */ }
         }
 
         const onRelocate = (e: Event) => {
@@ -164,6 +378,8 @@ export function useEpubReader() {
         relocateListenerRef.current = onRelocate;
         foliateViewRef.current.addEventListener('relocate', onRelocate);
 
+        injectSelectionListeners();
+
         setState(s => ({
           ...s,
           bookId: resolvedBookId,
@@ -175,13 +391,15 @@ export function useEpubReader() {
           isLoading: false,
         }));
 
-        // Upload to Supabase Storage in the background (non-blocking)
+        // Load existing annotations
+        const existingAnnotations = await fetchAnnotationsForBook(user.id, resolvedBookId);
+        setAnnotations(existingAnnotations);
+        drawAnnotations(foliateEl, existingAnnotations);
+
         let resolvedFileUrl: string | null = null;
         try {
           resolvedFileUrl = await uploadEpubToStorage(user.id, resolvedBookId, file);
-        } catch {
-          // non-fatal
-        }
+        } catch { /* non-fatal */ }
 
         try {
           await upsertReadingProgress(user.id, resolvedBookId, {
@@ -191,9 +409,7 @@ export function useEpubReader() {
             fileUrl: resolvedFileUrl,
             fileName: file.name,
           });
-        } catch {
-          // non-fatal
-        }
+        } catch { /* non-fatal */ }
 
         let startCfi: string | undefined;
         try {
@@ -202,13 +418,9 @@ export function useEpubReader() {
             startCfi = saved.cfi;
             setState(s => ({ ...s, currentCfi: saved.cfi, percentage: saved.percentage ?? 0 }));
           }
-        } catch {
-          // non-fatal
-        }
+        } catch { /* non-fatal */ }
 
         foliateEl.init({ lastLocation: startCfi ?? '' });
-
-        // Apply current read mode after init
         applyReadMode(readMode);
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Failed to open EPUB.';
@@ -216,17 +428,18 @@ export function useEpubReader() {
         removeRelocateListener();
       }
     },
-    [user, scheduleSave, removeRelocateListener, applyReadMode, readMode]
+    [user, scheduleSave, removeRelocateListener, applyReadMode, readMode, injectSelectionListeners]
   );
 
-  const goTo = useCallback((cfiOrHref: string) => {
-    if (!foliateViewRef.current || !state.isLoaded) return;
-    try {
-      (foliateViewRef.current as unknown as FoliateViewElement).goTo(cfiOrHref);
-    } catch {
-      // non-fatal
-    }
-  }, [state.isLoaded]);
+  const goTo = useCallback(
+    (cfiOrHref: string) => {
+      if (!foliateViewRef.current || !state.isLoaded) return;
+      try {
+        (foliateViewRef.current as unknown as FoliateViewElement).goTo(cfiOrHref);
+      } catch { /* non-fatal */ }
+    },
+    [state.isLoaded]
+  );
 
   const nextPage = useCallback(() => {
     if (!foliateViewRef.current || !state.isLoaded) return;
@@ -255,9 +468,16 @@ export function useEpubReader() {
       }
     }
     removeRelocateListener();
+    if (selectionCleanupRef.current) {
+      selectionCleanupRef.current();
+      selectionCleanupRef.current = null;
+    }
     currentBookIdRef.current = null;
     currentCfiRef.current = null;
     currentPercentageRef.current = 0;
+    setAnnotations([]);
+    setPendingSelection(null);
+    setActiveAnnotation(null);
     setState(initialState);
   }, [user, removeRelocateListener]);
 
@@ -265,6 +485,9 @@ export function useEpubReader() {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       removeRelocateListener();
+      if (selectionCleanupRef.current) {
+        selectionCleanupRef.current();
+      }
     };
   }, [removeRelocateListener]);
 
@@ -273,10 +496,20 @@ export function useEpubReader() {
     readMode,
     setReadMode,
     setViewer,
+    foliateViewRef,
     loadBook,
     goTo,
     nextPage,
     prevPage,
     closeBook,
+    annotations,
+    pendingSelection,
+    activeAnnotation,
+    setActiveAnnotation,
+    handleHighlight,
+    handleAnnotationColorChange,
+    handleAnnotationNoteChange,
+    handleAnnotationDelete,
+    dismissPopover,
   };
 }

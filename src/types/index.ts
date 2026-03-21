@@ -319,6 +319,40 @@ export interface GraphFilters {
   wordLinkId: string;
 }
 
+// ─── Annotation Types ─────────────────────────────────────────────────────────
+
+export type AnnotationColor = 'yellow' | 'green' | 'blue' | 'pink';
+
+export interface Annotation {
+  id: string;
+  userId: string;
+  bookId: string;
+  cfi: string;
+  text: string;
+  color: AnnotationColor;
+  note: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DatabaseAnnotation {
+  id: string;
+  user_id: string;
+  book_id: string;
+  cfi: string;
+  text: string;
+  color: string;
+  note: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PendingSelection {
+  cfi: string;
+  text: string;
+  rect: DOMRect;
+}
+
 // ─── Reader / EPUB Types ──────────────────────────────────────────────────────
 
 export interface ReadingProgress {

@@ -4,16 +4,37 @@ import { useEpubReader } from '../hooks/useEpubReader';
 import { ReaderToolbar } from '../components/reader/ReaderToolbar';
 import { TocPanel } from '../components/reader/TocPanel';
 import { BookshelfPanel } from '../components/reader/BookshelfPanel';
+import { AnnotationPopover } from '../components/reader/AnnotationPopover';
 
 export default function ReaderPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isTocOpen, setIsTocOpen] = useState(false);
 
-  const { state, readMode, setReadMode, setViewer, loadBook, goTo, nextPage, prevPage, closeBook } = useEpubReader();
+  const {
+    state,
+    readMode,
+    setReadMode,
+    setViewer,
+    loadBook,
+    goTo,
+    nextPage,
+    prevPage,
+    closeBook,
+    pendingSelection,
+    activeAnnotation,
+    handleHighlight,
+    handleAnnotationColorChange,
+    handleAnnotationNoteChange,
+    handleAnnotationDelete,
+    dismissPopover,
+  } = useEpubReader();
 
-  const viewerRef = useCallback((el: HTMLElement | null) => {
-    setViewer(el);
-  }, [setViewer]);
+  const viewerRef = useCallback(
+    (el: HTMLElement | null) => {
+      setViewer(el);
+    },
+    [setViewer]
+  );
 
   const handleOpenFilePicker = () => fileInputRef.current?.click();
 
@@ -37,16 +58,22 @@ export default function ReaderPage() {
     setReadMode(readMode === 'paginated' ? 'scrolled' : 'paginated');
   };
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (!state.isLoaded) return;
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextPage();
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') prevPage();
-  }, [state.isLoaded, nextPage, prevPage]);
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (!state.isLoaded) return;
+      if (e.key === 'Escape') { dismissPopover(); return; }
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextPage();
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') prevPage();
+    },
+    [state.isLoaded, nextPage, prevPage, dismissPopover]
+  );
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
+
+  const showPopover = pendingSelection !== null || activeAnnotation !== null;
 
   return (
     <div
@@ -117,7 +144,9 @@ export default function ReaderPage() {
 
         <div
           className={`flex-1 flex flex-col overflow-hidden transition-opacity duration-300 ${
-            state.isLoaded && !state.isLoading ? 'opacity-100' : 'opacity-0 pointer-events-none absolute inset-0'
+            state.isLoaded && !state.isLoading
+              ? 'opacity-100'
+              : 'opacity-0 pointer-events-none absolute inset-0'
           }`}
           style={{ background: '#faf9f7' }}
         >
@@ -159,6 +188,27 @@ export default function ReaderPage() {
           )}
         </div>
       </div>
+
+      {showPopover && pendingSelection && (
+        <AnnotationPopover
+          mode="new"
+          selection={pendingSelection}
+          onHighlight={handleHighlight}
+          onDismiss={dismissPopover}
+        />
+      )}
+
+      {showPopover && activeAnnotation && !pendingSelection && (
+        <AnnotationPopover
+          mode="existing"
+          annotation={activeAnnotation.annotation}
+          rect={activeAnnotation.rect}
+          onColorChange={handleAnnotationColorChange}
+          onNoteChange={handleAnnotationNoteChange}
+          onDelete={handleAnnotationDelete}
+          onDismiss={dismissPopover}
+        />
+      )}
     </div>
   );
 }
