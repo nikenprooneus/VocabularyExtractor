@@ -22,6 +22,7 @@ export default function ReaderPage() {
     annotations,
     pendingSelection,
     activeAnnotation,
+    setActiveAnnotation,
     handleSave,
     handleAnnotationColorChange,
     handleAnnotationNoteChange,
@@ -51,6 +52,13 @@ export default function ReaderPage() {
   const handleToggleReadMode = () => {
     setReadMode(readMode === 'paginated' ? 'scrolled' : 'paginated');
   };
+
+  const handleAnnotationClick = useCallback(
+    (annotation: import('../types').Annotation) => {
+      setActiveAnnotation({ annotation, rect: { top: 0, left: 0, width: 0, height: 0, bottom: 0, right: 0 } });
+    },
+    [setActiveAnnotation]
+  );
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -95,6 +103,7 @@ export default function ReaderPage() {
         onClose={handleClose}
         onToggleReadMode={handleToggleReadMode}
         onNavigate={goTo}
+        onAnnotationClick={handleAnnotationClick}
         onPrev={prevPage}
         onNext={nextPage}
         onGoToFraction={goToFraction}

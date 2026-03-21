@@ -7,7 +7,7 @@ import {
   uploadEpubToStorage,
 } from '../services/readerService';
 import { cacheEpubBlob } from '../services/epubCacheService';
-import { ensureFoliateLoaded } from '../utils/foliateLoader';
+import { ensureFoliateLoaded, ensureOverlayerLoaded } from '../utils/foliateLoader';
 import {
   fetchAnnotationsForBook,
   createAnnotation,
@@ -108,6 +108,7 @@ export function useEpubReader() {
   const currentCfiRef = useRef<string | null>(null);
   const currentPercentageRef = useRef<number>(0);
   const relocateListenerRef = useRef<((e: Event) => void) | null>(null);
+  const drawAnnotationListenerRef = useRef<((e: Event) => void) | null>(null);
   const selectionCleanupRef = useRef<(() => void) | null>(null);
   const annotationsRef = useRef<Annotation[]>([]);
 
@@ -138,6 +139,10 @@ export function useEpubReader() {
     if (foliateViewRef.current && relocateListenerRef.current) {
       foliateViewRef.current.removeEventListener('relocate', relocateListenerRef.current);
       relocateListenerRef.current = null;
+    }
+    if (foliateViewRef.current && drawAnnotationListenerRef.current) {
+      foliateViewRef.current.removeEventListener('draw-annotation', drawAnnotationListenerRef.current as EventListener);
+      drawAnnotationListenerRef.current = null;
     }
   }, []);
 
@@ -380,6 +385,25 @@ export function useEpubReader() {
 
         relocateListenerRef.current = onRelocate;
         foliateViewRef.current.addEventListener('relocate', onRelocate);
+
+        if (drawAnnotationListenerRef.current) {
+          foliateEl.removeEventListener('draw-annotation', drawAnnotationListenerRef.current as EventListener);
+          drawAnnotationListenerRef.current = null;
+        }
+        const onDrawAnnotation = (e: Event) => {
+          const { draw, annotation } = (e as CustomEvent<{
+            draw: (fn: unknown, opts: unknown) => void;
+            annotation: { color?: string };
+          }>).detail;
+          const color = annotation.color ?? 'rgba(253, 224, 71, 0.45)';
+          ensureOverlayerLoaded().then((Overlayer) => {
+            try {
+              draw(Overlayer.highlight, { color });
+            } catch { /* non-fatal */ }
+          }).catch(() => { /* non-fatal */ });
+        };
+        drawAnnotationListenerRef.current = onDrawAnnotation;
+        foliateEl.addEventListener('draw-annotation', onDrawAnnotation as EventListener);
 
         injectSelectionListeners();
 
