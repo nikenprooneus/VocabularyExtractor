@@ -160,6 +160,36 @@ export function useEpubReader() {
         }
       });
 
+      rendition.hooks.content.register((contents: any) => {
+        contents.document.addEventListener('selectionchange', () => {
+          const selection = contents.window.getSelection();
+          if (!selection || selection.toString().trim().length === 0) return;
+          setTimeout(() => {
+            try {
+              const sel = contents.window.getSelection();
+              if (!sel || sel.rangeCount === 0) return;
+              const text = sel.toString().trim();
+              if (!text) return;
+              const range = sel.getRangeAt(0);
+              const contextText = range?.commonAncestorContainer?.textContent?.trim() || text;
+              const cfiRange = (rendition as any).currentLocation?.()?.start?.cfi ?? '';
+              setPendingSelection(prev => {
+                if (prev && prev.text === text) return prev;
+                return {
+                  cfi: cfiRange,
+                  text,
+                  contextText,
+                  rect: { top: 0, left: 0, width: 0, height: 0, bottom: 0, right: 0 },
+                };
+              });
+              setActiveAnnotation(null);
+            } catch {
+              // non-fatal
+            }
+          }, 100);
+        });
+      });
+
       rendition.on('relocated', (loc: { start: { percentage: number } }) => {
         const pct = Math.round((loc?.start?.percentage ?? 0) * 100) / 100;
         currentPercentageRef.current = pct;

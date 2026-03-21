@@ -297,8 +297,9 @@ export function useVocabularyGenerator(settings: Settings): VocabularyGeneratorS
       }
 
       toast.success('Analysis saved!');
-    } catch {
-      toast.error('Failed to save analysis');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(`Failed to save analysis: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }

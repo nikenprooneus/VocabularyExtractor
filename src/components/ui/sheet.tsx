@@ -75,7 +75,7 @@ function SheetContent({ side = 'right', className, children }: SheetContentProps
       />
       <div
         className={cn(
-          'fixed z-50 bg-popover text-popover-foreground shadow-xl transition ease-in-out',
+          'fixed z-50 bg-background text-foreground shadow-xl transition ease-in-out',
           slideClasses[side],
           className
         )}

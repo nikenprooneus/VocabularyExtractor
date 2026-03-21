@@ -43,7 +43,7 @@ export function WordInputSection({
   };
 
   const handleExampleSelectionChange = (
-    e: React.MouseEvent<HTMLTextAreaElement> | React.KeyboardEvent<HTMLTextAreaElement>
+    e: React.PointerEvent<HTMLTextAreaElement> | React.KeyboardEvent<HTMLTextAreaElement>
   ) => {
     const target = e.target as HTMLTextAreaElement;
     const start = target.selectionStart;
@@ -106,7 +106,7 @@ export function WordInputSection({
               ref={textareaRef}
               value={example}
               onChange={handleExampleChange}
-              onMouseUp={handleExampleSelectionChange}
+              onPointerUp={handleExampleSelectionChange}
               onKeyUp={handleExampleSelectionChange}
               placeholder="e.g., Finding that old book in the library was pure serendipity."
               rows={2}
