@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Palette, Pencil, Highlighter, Trash2, StickyNote, X, Check, ChevronLeft } from 'lucide-react';
+import { Palette, Pencil, Highlighter, Trash2, StickyNote, X, Check, ChevronLeft, Wand2 } from 'lucide-react';
 import type { Annotation, AnnotationColor, PendingSelection } from '../../types';
 
 const COLOR_SWATCHES: { value: AnnotationColor; hex: string; label: string }[] = [
@@ -22,6 +22,7 @@ interface NewSelectionPopoverProps {
   selection: PendingSelection;
   onSave: (color: AnnotationColor, note?: string) => void;
   onDismiss: () => void;
+  onExtract?: () => void;
 }
 
 interface ExistingAnnotationPopoverProps {
@@ -48,7 +49,7 @@ const bottomSheetStyle: React.CSSProperties = {
 
 type NewStage = 'menu' | 'palette' | 'note';
 
-function NewSelectionPopover({ selection, onSave, onDismiss }: NewSelectionPopoverProps) {
+function NewSelectionPopover({ selection, onSave, onDismiss, onExtract }: NewSelectionPopoverProps) {
   const [stage, setStage] = useState<NewStage>('menu');
   const [noteText, setNoteText] = useState('');
   const [selectedColor, setSelectedColor] = useState<AnnotationColor>('yellow');
@@ -122,6 +123,19 @@ function NewSelectionPopover({ selection, onSave, onDismiss }: NewSelectionPopov
                 Note
               </span>
             </button>
+            {onExtract && (
+              <button
+                onClick={onExtract}
+                className="flex-1 flex flex-col items-center gap-2.5 py-4 px-2 rounded-xl border border-[#c9a96e]/30 hover:border-[#c9a96e] hover:bg-[#c9a96e]/10 transition-all group"
+              >
+                <div className="w-9 h-9 rounded-full bg-[#c9a96e]/15 group-hover:bg-[#c9a96e]/25 flex items-center justify-center transition-colors">
+                  <Wand2 size={17} className="text-[#c9a96e]" />
+                </div>
+                <span className="text-[11px] font-medium text-[#c9a96e] group-hover:text-[#d4b47a] transition-colors">
+                  Extract
+                </span>
+              </button>
+            )}
           </div>
         )}
 

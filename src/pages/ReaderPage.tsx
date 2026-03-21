@@ -1,10 +1,11 @@
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useState } from 'react';
 import { ReactReader, ReactReaderStyle } from 'react-reader';
 import type { IReactReaderStyle } from 'react-reader';
 import { AlertCircle, Loader2, BookOpen, X, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEpubReader } from '../hooks/useEpubReader';
 import { BookshelfPanel } from '../components/reader/BookshelfPanel';
 import { AnnotationPopover } from '../components/reader/AnnotationPopover';
+import { ReaderDictionaryModal } from '../components/reader/ReaderDictionaryModal';
 
 const darkTaupeReaderStyles: IReactReaderStyle = {
   ...ReactReaderStyle,
@@ -110,6 +111,7 @@ const darkTaupeReaderStyles: IReactReaderStyle = {
 
 export default function ReaderPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dictionarySelection, setDictionarySelection] = useState<{ word: string; contextText: string } | null>(null);
 
   const {
     state,
@@ -331,6 +333,10 @@ export default function ReaderPage() {
           selection={pendingSelection}
           onSave={handleSave}
           onDismiss={dismissPopover}
+          onExtract={() => {
+            setDictionarySelection({ word: pendingSelection.text, contextText: pendingSelection.contextText });
+            dismissPopover();
+          }}
         />
       )}
 
@@ -342,6 +348,14 @@ export default function ReaderPage() {
           onNoteChange={handleAnnotationNoteChange}
           onDelete={handleAnnotationDelete}
           onDismiss={dismissPopover}
+        />
+      )}
+
+      {dictionarySelection && (
+        <ReaderDictionaryModal
+          word={dictionarySelection.word}
+          contextText={dictionarySelection.contextText}
+          onClose={() => setDictionarySelection(null)}
         />
       )}
     </div>

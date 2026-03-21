@@ -359,6 +359,7 @@ export interface SelectionRect {
 export interface PendingSelection {
   cfi: string;
   text: string;
+  contextText: string;
   rect: SelectionRect;
 }
 
