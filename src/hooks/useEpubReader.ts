@@ -161,6 +161,18 @@ export function useEpubReader() {
       });
 
       rendition.hooks.content.register((contents: any) => {
+        try {
+          const body = contents.document?.body;
+          if (body) {
+            body.style.webkitUserSelect = 'text';
+            body.style.userSelect = 'text';
+            (body.style as any).webkitTouchCallout = 'default';
+            body.style.touchAction = 'pan-y pinch-zoom';
+          }
+        } catch {
+          // non-fatal
+        }
+
         const buildCfi = (range: Range): string => {
           try {
             const EpubCFI = (rendition as any).book?.EpubCFI ?? (rendition as any).epubjs?.EpubCFI;
@@ -253,7 +265,32 @@ export function useEpubReader() {
         setState(s => ({ ...s, percentage: pct }));
       });
 
+      let swipeShieldCleanup: (() => void) | null = null;
+
+      const installSwipeShield = () => {
+        try {
+          const container: HTMLElement | undefined = (rendition as any).manager?.container;
+          if (!container || (container as any).__swipeShieldInstalled) return;
+          (container as any).__swipeShieldInstalled = true;
+          const handler = (e: TouchEvent) => {
+            const target = e.target as Node | null;
+            if (target && container.contains(target)) {
+              e.stopPropagation();
+            }
+          };
+          container.addEventListener('touchstart', handler, { capture: true, passive: true });
+          swipeShieldCleanup = () => {
+            container.removeEventListener('touchstart', handler, { capture: true });
+            (container as any).__swipeShieldInstalled = false;
+          };
+        } catch {
+          // non-fatal
+        }
+      };
+
       rendition.on('rendered', () => {
+        installSwipeShield();
+
         const savedCfi = pendingCfiRef.current;
         if (savedCfi) {
           pendingCfiRef.current = null;
@@ -268,6 +305,11 @@ export function useEpubReader() {
         if (existing.length > 0) {
           loadAnnotations(rendition, existing);
         }
+      });
+
+      rendition.on('destroyed', () => {
+        swipeShieldCleanup?.();
+        swipeShieldCleanup = null;
       });
     },
     [loadAnnotations]
