@@ -40,6 +40,15 @@ const initialState: ReaderState = {
   error: null,
 };
 
+export type ReadMode = 'paginated' | 'scrolled';
+
+const FONT_FAMILY_MAP: Record<string, string> = {
+  'System Default': 'inherit',
+  'Serif': 'Georgia, serif',
+  'Sans-Serif': 'Arial, sans-serif',
+  'Monospace': '"Courier New", monospace',
+};
+
 export function useEpubReader() {
   const { user } = useAuth();
   const [state, setState] = useState<ReaderState>(initialState);
@@ -48,6 +57,9 @@ export function useEpubReader() {
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
   const [activeAnnotation, setActiveAnnotation] = useState<{ annotation: Annotation } | null>(null);
+  const [readMode, setReadMode] = useState<ReadMode>('paginated');
+  const [fontSize, setFontSize] = useState<number>(100);
+  const [fontFamily, setFontFamily] = useState<string>('System Default');
 
   const renditionRef = useRef<Rendition | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -398,6 +410,31 @@ export function useEpubReader() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!renditionRef.current || !state.isLoaded) return;
+    const rendition = renditionRef.current;
+    rendition.themes.fontSize(`${fontSize}%`);
+    const cssFamily = FONT_FAMILY_MAP[fontFamily] ?? 'inherit';
+    rendition.themes.default({
+      'p, div, span, h1, h2, h3, h4, h5, h6, a, li': {
+        'font-family': cssFamily === 'inherit' ? 'inherit' : `${cssFamily} !important`,
+        'line-height': '1.6 !important',
+      },
+    });
+  }, [fontSize, fontFamily, state.isLoaded]);
+
+  const handleSetReadMode = useCallback(
+    (newMode: ReadMode) => {
+      const latestCfi = renditionRef.current?.location?.start?.cfi;
+      if (latestCfi) {
+        setLocation(latestCfi);
+        currentCfiRef.current = latestCfi;
+      }
+      setReadMode(newMode);
+    },
+    []
+  );
+
   return {
     state,
     location,
@@ -416,5 +453,11 @@ export function useEpubReader() {
     handleAnnotationNoteChange,
     handleAnnotationDelete,
     dismissPopover,
+    readMode,
+    setReadMode: handleSetReadMode,
+    fontSize,
+    setFontSize,
+    fontFamily,
+    setFontFamily,
   };
 }

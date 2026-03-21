@@ -1,7 +1,7 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
 import { ReactReader, ReactReaderStyle } from 'react-reader';
 import type { IReactReaderStyle } from 'react-reader';
-import { AlertCircle, Loader2, BookOpen, X, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertCircle, Loader2, BookOpen, X, Upload, ChevronLeft, ChevronRight, Settings2 } from 'lucide-react';
 import { useEpubReader } from '../hooks/useEpubReader';
 import { BookshelfPanel } from '../components/reader/BookshelfPanel';
 import { AnnotationPopover } from '../components/reader/AnnotationPopover';
@@ -109,9 +109,13 @@ const darkTaupeReaderStyles: IReactReaderStyle = {
   },
 };
 
+const FONT_FAMILIES = ['System Default', 'Serif', 'Sans-Serif', 'Monospace'] as const;
+
 export default function ReaderPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const settingsRef = useRef<HTMLDivElement>(null);
   const [dictionarySelection, setDictionarySelection] = useState<{ word: string; contextText: string } | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const {
     state,
@@ -129,6 +133,12 @@ export default function ReaderPage() {
     handleAnnotationNoteChange,
     handleAnnotationDelete,
     dismissPopover,
+    readMode,
+    setReadMode,
+    fontSize,
+    setFontSize,
+    fontFamily,
+    setFontFamily,
   } = useEpubReader();
 
   const handleOpenFilePicker = () => fileInputRef.current?.click();
@@ -178,6 +188,17 @@ export default function ReaderPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  useEffect(() => {
+    if (!isSettingsOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setIsSettingsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isSettingsOpen]);
+
   const showAnnotationPopover = pendingSelection !== null || activeAnnotation !== null;
 
   const percentageDisplay = state.percentage > 0
@@ -225,6 +246,99 @@ export default function ReaderPage() {
                   {percentageDisplay}
                 </span>
               )}
+
+              <div className="relative" ref={settingsRef}>
+                <button
+                  onClick={() => setIsSettingsOpen(v => !v)}
+                  title="Reader settings"
+                  className={`p-1.5 rounded-lg transition-all ${isSettingsOpen ? 'text-[#c9a96e] bg-[#2e2c29]' : 'text-[#6b6762] hover:text-[#e8e4de] hover:bg-[#2e2c29]'}`}
+                >
+                  <Settings2 size={14} />
+                </button>
+
+                {isSettingsOpen && (
+                  <div
+                    className="absolute right-0 top-full mt-2 z-50 rounded-xl shadow-2xl"
+                    style={{
+                      width: '240px',
+                      background: '#232119',
+                      border: '1px solid #3a3835',
+                    }}
+                  >
+                    <div className="p-4 space-y-5">
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b6762] mb-2">
+                          Read Mode
+                        </p>
+                        <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid #3a3835' }}>
+                          {(['paginated', 'scrolled'] as const).map((mode) => (
+                            <button
+                              key={mode}
+                              onClick={() => setReadMode(mode)}
+                              className="flex-1 py-1.5 text-xs font-medium transition-all"
+                              style={{
+                                background: readMode === mode ? '#c9a96e' : 'transparent',
+                                color: readMode === mode ? '#1c1a18' : '#8a8680',
+                              }}
+                            >
+                              {mode === 'paginated' ? 'Pages' : 'Scroll'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b6762] mb-2">
+                          Font Size
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setFontSize(s => Math.max(70, s - 10))}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold transition-all"
+                            style={{ background: '#2e2c29', color: '#b8b4ae', border: '1px solid #3a3835' }}
+                            title="Decrease font size"
+                          >
+                            A<span className="text-[8px] align-bottom">-</span>
+                          </button>
+                          <span className="flex-1 text-center text-xs font-medium tabular-nums" style={{ color: '#e8e4de' }}>
+                            {fontSize}%
+                          </span>
+                          <button
+                            onClick={() => setFontSize(s => Math.min(200, s + 10))}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold transition-all"
+                            style={{ background: '#2e2c29', color: '#b8b4ae', border: '1px solid #3a3835' }}
+                            title="Increase font size"
+                          >
+                            A<span className="text-[10px] align-bottom">+</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b6762] mb-2">
+                          Font Family
+                        </p>
+                        <select
+                          value={fontFamily}
+                          onChange={e => setFontFamily(e.target.value)}
+                          className="w-full px-3 py-1.5 rounded-lg text-xs font-medium appearance-none cursor-pointer transition-all"
+                          style={{
+                            background: '#2e2c29',
+                            color: '#e8e4de',
+                            border: '1px solid #3a3835',
+                            outline: 'none',
+                          }}
+                        >
+                          {FONT_FAMILIES.map(f => (
+                            <option key={f} value={f} style={{ background: '#232119' }}>{f}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <button
                 onClick={handleOpenFilePicker}
                 title="Open another book"
@@ -245,13 +359,17 @@ export default function ReaderPage() {
 
           <div className="flex-1 overflow-hidden">
             <ReactReader
-              key={state.bookId ?? undefined}
+              key={`${state.bookId ?? 'no-book'}-${readMode}`}
               url={bookUrl!}
               location={location}
               locationChanged={onLocationChanged}
               getRendition={getRendition}
               readerStyles={darkTaupeReaderStyles}
               showToc={true}
+              epubOptions={{
+                flow: readMode === 'scrolled' ? 'scrolled' : 'paginated',
+                manager: 'continuous',
+              }}
               loadingView={
                 <div className="flex items-center justify-center h-full" style={{ background: '#1c1a18' }}>
                   <div className="flex flex-col items-center gap-3">
