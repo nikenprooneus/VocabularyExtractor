@@ -176,6 +176,12 @@ export function useEpubReader() {
           if (doc.body) {
             doc.body.style.touchAction = 'pan-y pinch-zoom';
           }
+
+          contents.document.addEventListener('touchstart', () => {
+            if (!contents.document.hasFocus()) {
+              contents.window.focus();
+            }
+          }, { passive: true });
         } catch {
           // non-fatal
         }

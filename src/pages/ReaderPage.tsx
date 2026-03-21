@@ -361,7 +361,7 @@ export default function ReaderPage() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-hidden" style={{ WebkitUserSelect: 'text', userSelect: 'text' }}>
+          <div className="flex-1 overflow-hidden" style={{ WebkitUserSelect: 'text', userSelect: 'text', touchAction: 'auto' }}>
             <ReactReader
               key={`${state.bookId ?? 'no-book'}-${readMode}`}
               url={bookUrl!}
@@ -373,7 +373,7 @@ export default function ReaderPage() {
               swipeable={false}
               epubOptions={{
                 flow: readMode === 'scrolled' ? 'scrolled' : 'paginated',
-                manager: 'continuous',
+                manager: readMode === 'scrolled' ? 'continuous' : 'default',
               }}
               loadingView={
                 <div className="flex items-center justify-center h-full" style={{ background: '#1c1a18' }}>
