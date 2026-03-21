@@ -164,12 +164,17 @@ export function useEpubReader() {
 
       rendition.hooks.content.register((contents: any) => {
         try {
-          const body = contents.document?.body;
-          if (body) {
-            body.style.webkitUserSelect = 'text';
-            body.style.userSelect = 'text';
-            (body.style as any).webkitTouchCallout = 'default';
-            body.style.touchAction = 'pan-y pinch-zoom';
+          const doc = contents.document;
+          const addSelectionStyles = (el: HTMLElement | null) => {
+            if (!el) return;
+            el.style.setProperty('-webkit-user-select', 'text', 'important');
+            el.style.setProperty('user-select', 'text', 'important');
+            el.style.setProperty('-webkit-touch-callout', 'default', 'important');
+          };
+          addSelectionStyles(doc.documentElement);
+          addSelectionStyles(doc.body);
+          if (doc.body) {
+            doc.body.style.touchAction = 'pan-y pinch-zoom';
           }
         } catch {
           // non-fatal

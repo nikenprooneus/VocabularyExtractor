@@ -17,6 +17,8 @@ const darkTaupeReaderStyles: IReactReaderStyle = {
     ...ReactReaderStyle.readerArea,
     background: '#1c1a18',
     transition: 'none',
+    userSelect: 'text',
+    WebkitUserSelect: 'text',
   },
   containerExpanded: {
     ...ReactReaderStyle.containerExpanded,
@@ -29,6 +31,8 @@ const darkTaupeReaderStyles: IReactReaderStyle = {
   reader: {
     ...ReactReaderStyle.reader,
     background: '#1c1a18',
+    userSelect: 'text',
+    WebkitUserSelect: 'text',
   },
   swipeWrapper: {
     ...ReactReaderStyle.swipeWrapper,
@@ -357,7 +361,7 @@ export default function ReaderPage() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden" style={{ WebkitUserSelect: 'text', userSelect: 'text' }}>
             <ReactReader
               key={`${state.bookId ?? 'no-book'}-${readMode}`}
               url={bookUrl!}
