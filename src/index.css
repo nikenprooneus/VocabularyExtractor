@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .duration-120 {
+    transition-duration: 120ms;
+  }
+}
+
 @layer base {
   body {
     @apply antialiased;

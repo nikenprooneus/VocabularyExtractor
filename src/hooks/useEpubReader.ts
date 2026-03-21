@@ -444,6 +444,18 @@ export function useEpubReader() {
     [state.isLoaded]
   );
 
+  const goToFraction = useCallback(
+    (fraction: number) => {
+      if (!foliateViewRef.current || !state.isLoaded) return;
+      try {
+        (foliateViewRef.current as unknown as FoliateViewElement & {
+          goToFraction: (fraction: number) => void;
+        }).goToFraction(fraction);
+      } catch { /* non-fatal */ }
+    },
+    [state.isLoaded]
+  );
+
   const nextPage = useCallback(() => {
     if (!foliateViewRef.current || !state.isLoaded) return;
     try {
@@ -502,6 +514,7 @@ export function useEpubReader() {
     foliateViewRef,
     loadBook,
     goTo,
+    goToFraction,
     nextPage,
     prevPage,
     closeBook,

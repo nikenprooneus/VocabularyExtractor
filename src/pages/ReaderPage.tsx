@@ -1,14 +1,12 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, AlertCircle, Loader2 } from 'lucide-react';
+import { useRef, useCallback, useEffect } from 'react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { useEpubReader } from '../hooks/useEpubReader';
-import { ReaderToolbar } from '../components/reader/ReaderToolbar';
-import { TocPanel } from '../components/reader/TocPanel';
+import { ReaderLayout } from '../components/reader/ReaderLayout';
 import { BookshelfPanel } from '../components/reader/BookshelfPanel';
 import { AnnotationPopover } from '../components/reader/AnnotationPopover';
 
 export default function ReaderPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isTocOpen, setIsTocOpen] = useState(false);
 
   const {
     state,
@@ -17,9 +15,11 @@ export default function ReaderPage() {
     setViewer,
     loadBook,
     goTo,
+    goToFraction,
     nextPage,
     prevPage,
     closeBook,
+    annotations,
     pendingSelection,
     activeAnnotation,
     handleSave,
@@ -44,13 +44,7 @@ export default function ReaderPage() {
     e.target.value = '';
   };
 
-  const handleNavigate = (href: string) => {
-    goTo(href);
-    setIsTocOpen(false);
-  };
-
   const handleClose = async () => {
-    setIsTocOpen(false);
     await closeBook();
   };
 
@@ -88,30 +82,23 @@ export default function ReaderPage() {
         onChange={handleFileChange}
       />
 
-      <ReaderToolbar
+      <ReaderLayout
         title={state.bookTitle}
         author={state.bookAuthor}
         percentage={state.percentage}
+        currentCfi={state.currentCfi}
         isLoaded={state.isLoaded}
-        isTocOpen={isTocOpen}
         readMode={readMode}
-        onToggleToc={() => setIsTocOpen(v => !v)}
+        tocItems={state.toc}
+        annotations={annotations}
+        onOpenFilePicker={handleOpenFilePicker}
+        onClose={handleClose}
+        onToggleReadMode={handleToggleReadMode}
+        onNavigate={goTo}
         onPrev={prevPage}
         onNext={nextPage}
-        onClose={handleClose}
-        onOpenFilePicker={handleOpenFilePicker}
-        onToggleReadMode={handleToggleReadMode}
-      />
-
-      <div className="flex-1 flex overflow-hidden relative">
-        {isTocOpen && state.isLoaded && (
-          <TocPanel
-            items={state.toc}
-            onNavigate={handleNavigate}
-            onClose={() => setIsTocOpen(false)}
-          />
-        )}
-
+        onGoToFraction={goToFraction}
+      >
         {state.error && (
           <div className="flex-1 flex items-center justify-center">
             <div className="flex flex-col items-center gap-3 text-center px-8 max-w-sm">
@@ -156,38 +143,8 @@ export default function ReaderPage() {
               className="absolute inset-0 w-full h-full"
             />
           </div>
-
-          {readMode === 'paginated' && (
-            <div className="flex-shrink-0 flex items-center justify-between px-4 py-2 bg-[#faf9f7] border-t border-[#e8e4de]">
-              <button
-                onClick={prevPage}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-[#8a8680] hover:text-[#3a3835] hover:bg-[#ede9e3] transition-colors"
-              >
-                <ChevronLeft size={14} />
-                Previous
-              </button>
-              <div className="flex items-center gap-2">
-                <div className="w-32 h-1 bg-[#e8e4de] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[#c9a96e] rounded-full transition-all duration-500"
-                    style={{ width: `${Math.round(state.percentage * 100)}%` }}
-                  />
-                </div>
-                <span className="text-[10px] text-[#8a8680] w-8">
-                  {Math.round(state.percentage * 100)}%
-                </span>
-              </div>
-              <button
-                onClick={nextPage}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-[#8a8680] hover:text-[#3a3835] hover:bg-[#ede9e3] transition-colors"
-              >
-                Next
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          )}
         </div>
-      </div>
+      </ReaderLayout>
 
       {showPopover && pendingSelection && (
         <AnnotationPopover
