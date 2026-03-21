@@ -161,32 +161,68 @@ export function useEpubReader() {
       });
 
       rendition.hooks.content.register((contents: any) => {
+        const isTouchDevice = () =>
+          typeof window !== 'undefined' &&
+          (navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches);
+
+        const commitSelection = () => {
+          try {
+            const sel = contents.window.getSelection();
+            if (!sel || sel.rangeCount === 0) return;
+            const text = sel.toString().trim();
+            if (!text) return;
+            const range = sel.getRangeAt(0);
+            const contextText = range?.commonAncestorContainer?.textContent?.trim() || text;
+
+            let cfiRange = '';
+            try {
+              const EpubCFI = (rendition as any).book?.EpubCFI ?? (rendition as any).epubjs?.EpubCFI;
+              if (EpubCFI && contents.cfiBase) {
+                cfiRange = new EpubCFI(range, contents.cfiBase).toString();
+              }
+            } catch {
+              // fall back to page-level CFI
+            }
+            if (!cfiRange) {
+              cfiRange = (rendition as any).currentLocation?.()?.start?.cfi ?? '';
+            }
+
+            setPendingSelection(prev => {
+              if (prev && prev.text === text) return prev;
+              return {
+                cfi: cfiRange,
+                text,
+                contextText,
+                rect: { top: 0, left: 0, width: 0, height: 0, bottom: 0, right: 0 },
+              };
+            });
+            setActiveAnnotation(null);
+          } catch {
+            // non-fatal
+          }
+        };
+
+        const onTouchEnd = () => {
+          setTimeout(commitSelection, 50);
+        };
+
+        const onPointerUp = (e: PointerEvent) => {
+          if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+            setTimeout(commitSelection, 50);
+          }
+        };
+
+        contents.document.addEventListener('touchend', onTouchEnd, { passive: true });
+        contents.document.addEventListener('pointerup', onPointerUp, { passive: true });
+
+        const selectionDebounceMs = isTouchDevice() ? 300 : 100;
+        let selectionTimer: ReturnType<typeof setTimeout> | null = null;
+
         contents.document.addEventListener('selectionchange', () => {
           const selection = contents.window.getSelection();
           if (!selection || selection.toString().trim().length === 0) return;
-          setTimeout(() => {
-            try {
-              const sel = contents.window.getSelection();
-              if (!sel || sel.rangeCount === 0) return;
-              const text = sel.toString().trim();
-              if (!text) return;
-              const range = sel.getRangeAt(0);
-              const contextText = range?.commonAncestorContainer?.textContent?.trim() || text;
-              const cfiRange = (rendition as any).currentLocation?.()?.start?.cfi ?? '';
-              setPendingSelection(prev => {
-                if (prev && prev.text === text) return prev;
-                return {
-                  cfi: cfiRange,
-                  text,
-                  contextText,
-                  rect: { top: 0, left: 0, width: 0, height: 0, bottom: 0, right: 0 },
-                };
-              });
-              setActiveAnnotation(null);
-            } catch {
-              // non-fatal
-            }
-          }, 100);
+          if (selectionTimer) clearTimeout(selectionTimer);
+          selectionTimer = setTimeout(commitSelection, selectionDebounceMs);
         });
       });
 
