@@ -141,6 +141,8 @@ export default function ReaderPage() {
     setFontFamily,
   } = useEpubReader();
 
+  const readerContainerRef = useRef<HTMLDivElement>(null);
+
   const handleOpenFilePicker = () => fileInputRef.current?.click();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -187,6 +189,34 @@ export default function ReaderPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
+
+  useEffect(() => {
+    if (!state.isLoaded || !readerContainerRef.current) return;
+
+    const container = readerContainerRef.current;
+
+    const patchSwipeWrapper = () => {
+      const readerAreaDiv = container.querySelector('div[style*="position: relative"]') as HTMLElement | null;
+      if (!readerAreaDiv) return false;
+
+      for (let i = 0; i < readerAreaDiv.children.length; i++) {
+        const child = readerAreaDiv.children[i] as HTMLElement;
+        if (child.tagName === 'DIV' && child.style.height === '100%') {
+          child.style.touchAction = 'pan-y';
+          return true;
+        }
+      }
+      return false;
+    };
+
+    if (!patchSwipeWrapper()) {
+      const observer = new MutationObserver(() => {
+        if (patchSwipeWrapper()) observer.disconnect();
+      });
+      observer.observe(container, { childList: true, subtree: true });
+      return () => observer.disconnect();
+    }
+  }, [state.isLoaded]);
 
   useEffect(() => {
     if (!isSettingsOpen) return;
@@ -357,7 +387,7 @@ export default function ReaderPage() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden" ref={readerContainerRef}>
             <ReactReader
               key={`${state.bookId ?? 'no-book'}-${readMode}`}
               url={bookUrl!}
