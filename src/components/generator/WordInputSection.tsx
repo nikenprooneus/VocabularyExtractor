@@ -1,5 +1,10 @@
 import { useRef } from 'react';
 import { Loader, Zap, RotateCcw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface WordInputSectionProps {
   word: string;
@@ -52,18 +57,14 @@ export function WordInputSection({
 
   const renderHighlightedExample = () => {
     const trimmedWord = word.trim();
-    if (!trimmedWord || !example) {
-      return <span>{example}</span>;
-    }
+    if (!trimmedWord || !example) return <span>{example}</span>;
     const regex = new RegExp(`(${trimmedWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
     const parts = example.split(regex);
     return (
       <>
         {parts.map((part, i) =>
           regex.test(part) ? (
-            <mark key={i} className="bg-yellow-200/60 text-transparent rounded px-0.5">
-              {part}
-            </mark>
+            <mark key={i} className="bg-primary/25 text-transparent rounded px-0.5">{part}</mark>
           ) : (
             <span key={i}>{part}</span>
           )
@@ -73,88 +74,80 @@ export function WordInputSection({
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 sm:p-6">
-      <div className="space-y-4">
-        <div className="flex flex-col gap-5">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              English Word <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={word}
-              onChange={(e) => onWordChange(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && onGenerate()}
-              placeholder="e.g., serendipity"
-              disabled={isLoading}
-              className="w-full bg-transparent border border-slate-200 rounded-md px-4 py-3 text-lg sm:text-xl font-semibold text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition disabled:opacity-50 disabled:cursor-not-allowed"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Example Sentence <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <div
-                aria-hidden="true"
-                className="absolute inset-0 pointer-events-none overflow-hidden rounded-md px-4 py-3 text-base whitespace-pre-wrap break-words text-transparent leading-normal"
-              >
-                {renderHighlightedExample()}
-              </div>
-              <textarea
-                ref={textareaRef}
-                value={example}
-                onChange={handleExampleChange}
-                onMouseUp={handleExampleSelectionChange}
-                onKeyUp={handleExampleSelectionChange}
-                placeholder="e.g., Finding that old book in the library was pure serendipity."
-                rows={1}
-                required
-                disabled={isLoading}
-                style={{ overflow: 'hidden' }}
-                className={`w-full bg-transparent relative z-10 border rounded-md px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:border-transparent transition disabled:opacity-50 disabled:cursor-not-allowed resize-none leading-normal ${
-                  isWordMissing
-                    ? 'border-red-500 focus:ring-red-500'
-                    : 'border-slate-200 focus:ring-slate-900'
-                }`}
-              />
-            </div>
-            {isWordMissing && (
-              <p className="mt-1.5 text-xs text-red-500">
-                The word must be present in the example sentence.
-              </p>
-            )}
-          </div>
+    <Card>
+      <CardContent className="pt-6 space-y-5">
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+            English Word <span className="text-destructive normal-case font-normal">*</span>
+          </label>
+          <Input
+            type="text"
+            value={word}
+            onChange={(e) => onWordChange(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && onGenerate()}
+            placeholder="e.g., serendipity"
+            disabled={isLoading}
+            className="h-11 text-lg font-semibold px-4"
+          />
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-2.5">
-          <button
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+            Example Sentence <span className="text-destructive normal-case font-normal">*</span>
+          </label>
+          <div className="relative">
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 pointer-events-none overflow-hidden rounded-md px-3 py-2 text-sm whitespace-pre-wrap break-words text-transparent leading-normal"
+            >
+              {renderHighlightedExample()}
+            </div>
+            <Textarea
+              ref={textareaRef}
+              value={example}
+              onChange={handleExampleChange}
+              onMouseUp={handleExampleSelectionChange}
+              onKeyUp={handleExampleSelectionChange}
+              placeholder="e.g., Finding that old book in the library was pure serendipity."
+              rows={2}
+              disabled={isLoading}
+              style={{ overflow: 'hidden' }}
+              className={cn(
+                'relative z-10 leading-normal bg-transparent',
+                isWordMissing && 'border-destructive focus-visible:ring-destructive'
+              )}
+            />
+          </div>
+          {isWordMissing && (
+            <p className="mt-1.5 text-xs text-destructive">
+              The word must be present in the example sentence.
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button
             onClick={onGenerate}
             disabled={isLoading || !isSettingsConfigured || !word.trim() || !example.trim() || isWordMissing}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-700 disabled:opacity-50 text-white py-2 px-5 rounded-md text-sm font-medium transition-all"
+            className="w-full sm:w-auto gap-2"
           >
             {isLoading ? (
-              <>
-                <Loader size={15} className="animate-spin" />
-                Generating...
-              </>
+              <><Loader size={14} className="animate-spin" />Generating...</>
             ) : (
-              <>
-                <Zap size={15} />
-                Generate
-              </>
+              <><Zap size={14} />Generate</>
             )}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
             onClick={onClear}
             disabled={isLoading || !hasClearableContent}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-700 py-2 px-5 rounded-md text-sm font-medium transition-all"
+            className="w-full sm:w-auto gap-2"
           >
-            <RotateCcw size={15} />
+            <RotateCcw size={14} />
             Clear
-          </button>
+          </Button>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
