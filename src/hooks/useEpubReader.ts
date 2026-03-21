@@ -299,6 +299,18 @@ export function useEpubReader() {
         setAnnotations(existingAnnotations);
         annotationsRef.current = existingAnnotations;
 
+        let savedCfi: string | null = null;
+        let savedPercentage = 0;
+        try {
+          const saved = await fetchReadingProgressByBookId(user.id, bookId);
+          if (saved?.cfi) {
+            savedCfi = saved.cfi;
+            savedPercentage = saved.percentage ?? 0;
+          }
+        } catch {
+          // non-fatal
+        }
+
         let resolvedFileUrl: string | null = null;
         try {
           resolvedFileUrl = await uploadEpubToStorage(user.id, bookId, file);
@@ -315,23 +327,20 @@ export function useEpubReader() {
             coverUrl: null,
             fileUrl: resolvedFileUrl,
             fileName: file.name,
+            cfi: savedCfi,
+            percentage: savedPercentage || null,
           });
         } catch {
           // non-fatal
         }
 
         let startLocation: string | number = 0;
-        try {
-          const saved = await fetchReadingProgressByBookId(user.id, bookId);
-          if (saved?.cfi) {
-            startLocation = saved.cfi;
-            pendingCfiRef.current = saved.cfi;
-            currentCfiRef.current = saved.cfi;
-            currentPercentageRef.current = saved.percentage ?? 0;
-            setState(s => ({ ...s, currentCfi: saved.cfi, percentage: saved.percentage ?? 0 }));
-          }
-        } catch {
-          // non-fatal
+        if (savedCfi) {
+          startLocation = savedCfi;
+          pendingCfiRef.current = savedCfi;
+          currentCfiRef.current = savedCfi;
+          currentPercentageRef.current = savedPercentage;
+          setState(s => ({ ...s, currentCfi: savedCfi, percentage: savedPercentage }));
         }
 
         setLocation(startLocation);
