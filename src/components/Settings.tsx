@@ -260,8 +260,8 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <Loader className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2" />
-          <p className="text-slate-600">Loading settings...</p>
+          <Loader className="w-8 h-8 animate-spin text-primary mx-auto mb-2" />
+          <p className="text-muted-foreground">Loading settings...</p>
         </div>
       </div>
     );
@@ -279,11 +279,11 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
                   onClick={() => setActiveTab(key)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-150 ${
                     isActive
-                      ? 'bg-slate-800 text-white shadow-sm'
-                      : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   }`}
                 >
-                  <Icon size={16} className={isActive ? 'text-white' : 'text-slate-400'} />
+                  <Icon size={16} className={isActive ? 'text-primary-foreground' : 'text-muted-foreground'} />
                   <span>{label}</span>
                 </button>
               </li>
@@ -325,9 +325,9 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
 
         {activeTab === 'ConceptTree' && (
           <>
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-              <p className="text-sm text-slate-700">
-                <span className="font-semibold">Concept Tree Configuration</span> — These settings drive the Concept Tree analysis exclusively. Add fields like <code className="bg-white border border-slate-200 px-1 rounded text-xs">Tier1</code>, <code className="bg-white border border-slate-200 px-1 rounded text-xs">Tier2</code>, <code className="bg-white border border-slate-200 px-1 rounded text-xs">Tier3</code>, and write a dedicated prompt. <code className="bg-white border border-slate-200 px-1 rounded text-xs">ConceptLink</code> is a mandatory field that labels the semantic relationship between Tier 3 and the word — it cannot be deleted. When you click Generate, this runs as a separate parallel API call — keeping your TMRND prompt lean and focused.
+            <div className="bg-muted/50 border border-border rounded-lg p-4">
+              <p className="text-sm text-foreground">
+                <span className="font-semibold">Concept Tree Configuration</span> — These settings drive the Concept Tree analysis exclusively. Add fields like <code className="bg-background border border-border px-1 rounded text-xs">Tier1</code>, <code className="bg-background border border-border px-1 rounded text-xs">Tier2</code>, <code className="bg-background border border-border px-1 rounded text-xs">Tier3</code>, and write a dedicated prompt. <code className="bg-background border border-border px-1 rounded text-xs">ConceptLink</code> is a mandatory field that labels the semantic relationship between Tier 3 and the word — it cannot be deleted. When you click Generate, this runs as a separate parallel API call — keeping your TMRND prompt lean and focused.
               </p>
             </div>
 
@@ -361,16 +361,16 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
               onSetActive={setActiveLLMProfile}
             />
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100">
-                <h2 className="text-base font-semibold text-slate-900">Global Generation Settings</h2>
-                <p className="text-sm text-slate-500 mt-0.5">Applied to all profiles when generating</p>
+            <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+              <div className="px-6 py-4 border-b border-border">
+                <h2 className="text-base font-semibold text-foreground">Global Generation Settings</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">Applied to all profiles when generating</p>
               </div>
               <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-sm font-medium text-slate-700">Temperature</label>
-                    <span className="text-sm font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                    <label className="block text-sm font-medium text-foreground">Temperature</label>
+                    <span className="text-sm font-mono font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded">
                       {temperature.toFixed(1)}
                     </span>
                   </div>
@@ -381,16 +381,16 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
                     step={0.1}
                     value={temperature}
                     onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                    className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
                   />
-                  <div className="flex justify-between text-xs text-slate-400 mt-1">
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
                     <span>0.0 Precise</span>
                     <span>2.0 Creative</span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Max Tokens</label>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Max Tokens</label>
                   <input
                     type="number"
                     min={100}
@@ -398,9 +398,9 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
                     step={100}
                     value={llmMaxTokens}
                     onChange={(e) => setLlmMaxTokens(parseInt(e.target.value, 10) || 2000)}
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                   />
-                  <p className="text-xs text-slate-400 mt-1.5">Max tokens per generation (100–32000)</p>
+                  <p className="text-xs text-muted-foreground mt-1.5">Max tokens per generation (100–32000)</p>
                 </div>
               </div>
             </div>
@@ -417,7 +417,7 @@ export function Settings({ settings, onSave, isLoading }: SettingsProps) {
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white py-3 px-4 rounded-lg font-semibold transition flex items-center justify-center gap-2"
+          className="w-full bg-primary hover:opacity-90 disabled:opacity-50 text-primary-foreground py-3 px-4 rounded-lg font-semibold transition flex items-center justify-center gap-2"
         >
           {isSaving ? (
             <>

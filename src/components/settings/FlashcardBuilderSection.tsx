@@ -1,5 +1,13 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { FlashcardConfig, OutputField } from '../../types/index';
+import { Label } from '../ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 
 interface FlashcardBuilderSectionProps {
   flashcardConfigs: FlashcardConfig[];
@@ -23,23 +31,34 @@ export function FlashcardBuilderSection({
   onRemoveFieldFromCard,
 }: FlashcardBuilderSectionProps) {
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Flashcard Builder</h2>
-      <p className="text-sm text-gray-600 mb-4">
-        Create flashcards by assigning fields to front and back. Definition field will always display separately at the top.
-      </p>
-
-      <div className="space-y-4">
+    <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+      <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-foreground">Flashcard Builder</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Assign fields to card fronts and backs. Definition always displays separately at the top.
+          </p>
+        </div>
         <button
           onClick={onAddCard}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition flex items-center justify-center gap-2"
+          className="flex items-center gap-1.5 px-3 py-2 bg-primary hover:opacity-90 text-primary-foreground rounded-lg text-sm font-medium transition-all"
         >
-          <Plus size={18} />
-          Add New Card
+          <Plus size={14} />
+          Add Card
         </button>
+      </div>
 
+      <div className="p-6">
         {flashcardConfigs.length === 0 ? (
-          <p className="text-gray-500 text-sm py-4 text-center">No flashcards created yet</p>
+          <div className="text-center py-10 text-muted-foreground">
+            <p className="text-sm">No flashcard layouts created yet.</p>
+            <button
+              onClick={onAddCard}
+              className="mt-3 text-sm text-primary hover:opacity-80 underline underline-offset-2"
+            >
+              Create your first card
+            </button>
+          </div>
         ) : (
           <div className="space-y-4">
             {flashcardConfigs.map((config, index) => {
@@ -52,64 +71,72 @@ export function FlashcardBuilderSection({
               const availableForBack = config.backFieldIds.length > 0 ? [...availableForThis, ...backFields] : availableForThis;
 
               return (
-                <div key={config.id} className="border border-gray-300 rounded-lg p-4 bg-gray-50">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-gray-900">Card {index + 1}</h3>
+                <div key={config.id} className="border border-border rounded-xl p-4 bg-muted/20">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-foreground text-sm">Card {index + 1}</h3>
                     <button
                       onClick={() => onDeleteCard(config.id)}
-                      className="text-red-600 hover:text-red-800 transition-colors"
+                      className="text-destructive hover:opacity-80 transition-opacity"
+                      title="Delete card"
                     >
-                      <Trash2 size={18} />
+                      <Trash2 size={16} />
                     </button>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Front Field <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        value={config.frontFieldId}
-                        onChange={(e) => onFrontFieldChange(config.id, e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      <Label className="mb-1.5">
+                        Front Field <span className="text-destructive normal-case font-normal">*</span>
+                      </Label>
+                      <Select
+                        value={config.frontFieldId || ''}
+                        onValueChange={(value) => onFrontFieldChange(config.id, value)}
                       >
-                        <option value="">Select a field...</option>
-                        {availableForFront.map(field => (
-                          <option key={field.id} value={field.id}>{field.name}</option>
-                        ))}
-                      </select>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a field..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableForFront.map(field => (
+                            <SelectItem key={field.id} value={field.id}>{field.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Back Fields (up to 3)
-                      </label>
+                      <Label className="mb-1.5">
+                        Back Fields{' '}
+                        <span className="normal-case font-normal text-muted-foreground">(up to 3)</span>
+                      </Label>
                       {config.backFieldIds.length < 3 && (
-                        <select
+                        <Select
                           value=""
-                          onChange={(e) => onBackFieldAdd(config.id, e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+                          onValueChange={(value) => onBackFieldAdd(config.id, value)}
                         >
-                          <option value="">Add a field...</option>
-                          {availableForBack.map(field => (
-                            <option key={field.id} value={field.id}>{field.name}</option>
-                          ))}
-                        </select>
+                          <SelectTrigger className="mb-2">
+                            <SelectValue placeholder="Add a field..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableForBack.map(field => (
+                              <SelectItem key={field.id} value={field.id}>{field.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       )}
                       <div className="space-y-2">
                         {backFields.map((field) => (
-                          <div key={field.id} className="flex items-center justify-between bg-white px-3 py-2 rounded border border-gray-200">
-                            <span className="text-gray-800 text-sm">{field.name}</span>
+                          <div key={field.id} className="flex items-center justify-between bg-background px-3 py-2 rounded-lg border border-border">
+                            <span className="text-foreground text-sm">{field.name}</span>
                             <button
                               onClick={() => onRemoveFieldFromCard(config.id, field.id, 'back')}
-                              className="text-red-600 hover:text-red-800 transition-colors"
+                              className="text-destructive hover:opacity-80 transition-opacity"
                             >
                               <Trash2 size={14} />
                             </button>
                           </div>
                         ))}
                         {config.backFieldIds.length === 0 && (
-                          <p className="text-gray-400 text-xs">No back fields added yet</p>
+                          <p className="text-muted-foreground text-xs">No back fields added yet</p>
                         )}
                       </div>
                     </div>

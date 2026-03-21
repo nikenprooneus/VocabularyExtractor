@@ -3,6 +3,15 @@ import { Plus, Trash2, Eye, EyeOff, Loader, Check, ChevronRight, Pencil } from '
 import type { LLMProvider, LLMProviderProfile, LLMApiParams } from '../../types';
 import { testConnection } from '../../services/apiService';
 import toast from 'react-hot-toast';
+import { Label } from '../ui/label';
+import { Switch } from '../ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 
 interface ProviderMeta {
   id: LLMProvider;
@@ -63,16 +72,16 @@ const PROVIDERS: ProviderMeta[] = [
 ];
 
 const PROVIDER_BADGE_COLORS: Record<LLMProvider, string> = {
-  openai: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  anthropic: 'bg-amber-50 text-amber-700 border-amber-200',
-  google: 'bg-blue-50 text-blue-700 border-blue-200',
-  deepseek: 'bg-sky-50 text-sky-700 border-sky-200',
-  'openai-compatible': 'bg-slate-50 text-slate-700 border-slate-200',
-  custom: 'bg-slate-50 text-slate-700 border-slate-200',
+  openai: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800',
+  anthropic: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800',
+  google: 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950 dark:text-sky-300 dark:border-sky-800',
+  deepseek: 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950 dark:text-cyan-300 dark:border-cyan-800',
+  'openai-compatible': 'bg-muted text-muted-foreground border-border',
+  custom: 'bg-muted text-muted-foreground border-border',
 };
 
 function ProviderIcon({ provider, selected }: { provider: LLMProvider; selected: boolean }) {
-  const cls = `w-5 h-5 ${selected ? 'opacity-100' : 'opacity-55'}`;
+  const cls = `w-5 h-5 ${selected ? 'opacity-100' : 'opacity-50'}`;
   if (provider === 'openai') {
     return (
       <svg viewBox="0 0 24 24" className={cls} fill="currentColor">
@@ -218,18 +227,19 @@ function ProfileForm({ profile, temperature, maxTokens, onSave, onDelete, onCanc
   return (
     <div className="space-y-5">
       <div>
-        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Profile Name</label>
+        <Label htmlFor="profile-name" className="mb-1.5">Profile Name</Label>
         <input
+          id="profile-name"
           type="text"
           value={form.name}
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
           placeholder='e.g. "My Work OpenAI Key"'
-          className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
         />
       </div>
 
       <div>
-        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Provider</label>
+        <Label className="mb-2">Provider</Label>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
           {PROVIDERS.map((p) => {
             const isSelected = form.provider === p.id;
@@ -240,13 +250,13 @@ function ProfileForm({ profile, temperature, maxTokens, onSave, onDelete, onCanc
                 onClick={() => handleProviderChange(p.id)}
                 className={`relative flex flex-col items-center justify-center px-2 py-2.5 rounded-lg border-2 text-xs font-medium transition-all duration-150 ${
                   isSelected
-                    ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                    ? 'border-primary bg-primary/5 text-primary shadow-sm'
+                    : 'border-border bg-background text-muted-foreground hover:border-border hover:bg-muted/50'
                 }`}
               >
                 <ProviderIcon provider={p.id} selected={isSelected} />
                 <span className="mt-1 leading-tight text-center text-[11px]">{p.shortLabel}</span>
-                {isSelected && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                {isSelected && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-primary" />}
               </button>
             );
           })}
@@ -254,21 +264,22 @@ function ProfileForm({ profile, temperature, maxTokens, onSave, onDelete, onCanc
       </div>
 
       <div>
-        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-          API Key <span className="text-red-400">*</span>
-        </label>
+        <Label htmlFor="api-key" className="mb-1.5">
+          API Key <span className="text-destructive normal-case font-normal">*</span>
+        </Label>
         <div className="relative">
           <input
+            id="api-key"
             type={showKey ? 'text' : 'password'}
             value={form.apiKey}
             onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
             placeholder={providerMeta.keyPlaceholder}
-            className="w-full pr-10 px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+            className="w-full pr-10 px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent font-mono"
           />
           <button
             type="button"
             onClick={() => setShowKey((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
           >
             {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
           </button>
@@ -277,17 +288,21 @@ function ProfileForm({ profile, temperature, maxTokens, onSave, onDelete, onCanc
 
       {(isCompatible || form.baseURL) && (
         <div>
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-            Base URL {isCompatible && <span className="text-red-400">*</span>}
-          </label>
+          <Label htmlFor="base-url" className="mb-1.5">
+            Base URL {isCompatible && <span className="text-destructive normal-case font-normal">*</span>}
+          </Label>
           <input
+            id="base-url"
             type="text"
             value={form.baseURL ?? ''}
             onChange={(e) => setForm((f) => ({ ...f, baseURL: e.target.value }))}
             placeholder="https://my-proxy.example.com/v1"
-            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+            className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent font-mono"
           />
-          <p className="text-xs text-slate-400 mt-1">OpenAI-compatible endpoint. URL should end with <code className="bg-slate-100 px-1 rounded">/v1</code></p>
+          <p className="text-xs text-muted-foreground mt-1">
+            OpenAI-compatible endpoint. URL should end with{' '}
+            <code className="bg-muted border border-border px-1 rounded">/v1</code>
+          </p>
         </div>
       )}
 
@@ -295,7 +310,7 @@ function ProfileForm({ profile, temperature, maxTokens, onSave, onDelete, onCanc
         <button
           type="button"
           onClick={() => setForm((f) => ({ ...f, baseURL: '' }))}
-          className="text-xs text-blue-600 hover:text-blue-700 underline underline-offset-2"
+          className="text-xs text-primary hover:opacity-80 underline underline-offset-2"
         >
           + Add custom Base URL override
         </button>
@@ -303,14 +318,14 @@ function ProfileForm({ profile, temperature, maxTokens, onSave, onDelete, onCanc
 
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">
-            Model <span className="text-red-400">*</span>
-          </label>
+          <Label>
+            Model <span className="text-destructive normal-case font-normal">*</span>
+          </Label>
           {!isCompatible && (
             <button
               type="button"
               onClick={() => setForm((f) => ({ ...f, isCustomModel: !f.isCustomModel, model: f.isCustomModel ? (providerMeta.models[0] ?? '') : f.model }))}
-              className="text-xs text-blue-600 hover:text-blue-700 underline underline-offset-2"
+              className="text-xs text-primary hover:opacity-80 underline underline-offset-2"
             >
               {form.isCustomModel ? 'Use dropdown' : 'Type custom model'}
             </button>
@@ -322,26 +337,29 @@ function ProfileForm({ profile, temperature, maxTokens, onSave, onDelete, onCanc
             value={form.model}
             onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))}
             placeholder="e.g. gpt-5-mini or my-custom-model-v2"
-            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+            className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent font-mono"
           />
         ) : (
-          <select
+          <Select
             value={form.model}
-            onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))}
-            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+            onValueChange={(value) => setForm((f) => ({ ...f, model: value }))}
           >
-            {providerMeta.models.map((m) => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a model..." />
+            </SelectTrigger>
+            <SelectContent>
+              {providerMeta.models.map((m) => (
+                <SelectItem key={m} value={m}>{m}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
       </div>
 
       <div>
-        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-          Max Completion Tokens
-        </label>
+        <Label htmlFor="max-tokens" className="mb-1.5">Max Completion Tokens</Label>
         <input
+          id="max-tokens"
           type="number"
           min={1}
           max={200000}
@@ -351,49 +369,32 @@ function ProfileForm({ profile, temperature, maxTokens, onSave, onDelete, onCanc
             setForm((f) => ({ ...f, maxTokens: val === '' ? undefined : Math.max(1, parseInt(val, 10)) }));
           }}
           placeholder={`Global default (${maxTokens})`}
-          className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
         />
-        <p className="text-xs text-slate-400 mt-1">Leave blank to use the global default. Overrides per profile for models with specific limits.</p>
+        <p className="text-xs text-muted-foreground mt-1">Leave blank to use the global default. Overrides per profile for models with specific limits.</p>
       </div>
 
       <div>
-        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-          API Parameters
-        </label>
-        <p className="text-xs text-slate-400 mb-3">Uncheck parameters your model does not support (e.g. some reasoning models reject temperature or structured output).</p>
-        <div className="space-y-2.5">
+        <Label className="mb-2">API Parameters</Label>
+        <p className="text-xs text-muted-foreground mb-3">Uncheck parameters your model does not support (e.g. some reasoning models reject temperature or structured output).</p>
+        <div className="space-y-3">
           {([
             { key: 'useTemperature' as const, label: 'Include temperature', desc: 'Sends the temperature value with each request' },
             { key: 'useMaxTokens' as const, label: 'Include max tokens limit', desc: 'Sends max_completion_tokens / max_tokens with each request' },
             { key: 'useJsonSchema' as const, label: 'Use structured JSON output', desc: 'Sends response_format / tool schema for structured extraction' },
           ]).map(({ key, label, desc }) => (
-            <label key={key} className="flex items-start gap-3 cursor-pointer group">
-              <div className="relative mt-0.5 shrink-0">
-                <input
-                  type="checkbox"
-                  checked={apiParams[key]}
-                  onChange={(e) => setApiParam(key, e.target.checked)}
-                  className="sr-only"
-                />
-                <div
-                  className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
-                    apiParams[key]
-                      ? 'bg-blue-500 border-blue-500'
-                      : 'bg-white border-slate-300 group-hover:border-slate-400'
-                  }`}
-                >
-                  {apiParams[key] && (
-                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 8">
-                      <path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                </div>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-slate-700">{label}</span>
-                <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
-              </div>
-            </label>
+            <div key={key} className="flex items-start gap-3">
+              <Switch
+                id={`param-${key}`}
+                checked={apiParams[key]}
+                onCheckedChange={(checked) => setApiParam(key, checked)}
+                className="mt-0.5 shrink-0"
+              />
+              <label htmlFor={`param-${key}`} className="cursor-pointer">
+                <span className="text-sm font-medium text-foreground">{label}</span>
+                <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
+              </label>
+            </div>
           ))}
         </div>
       </div>
@@ -403,7 +404,7 @@ function ProfileForm({ profile, temperature, maxTokens, onSave, onDelete, onCanc
           type="button"
           onClick={handleSave}
           disabled={isSaving}
-          className="flex-1 bg-slate-800 hover:bg-slate-900 disabled:bg-slate-400 text-white py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
+          className="flex-1 bg-primary hover:opacity-90 disabled:opacity-50 text-primary-foreground py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
         >
           {isSaving ? <Loader size={14} className="animate-spin" /> : <Check size={14} />}
           {isSaving ? 'Saving...' : 'Save Profile'}
@@ -412,7 +413,7 @@ function ProfileForm({ profile, temperature, maxTokens, onSave, onDelete, onCanc
           type="button"
           onClick={handleTest}
           disabled={isTesting}
-          className="flex-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
+          className="flex-1 bg-background hover:bg-muted border border-border text-foreground py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
         >
           {isTesting ? <Loader size={14} className="animate-spin" /> : null}
           {isTesting ? 'Testing...' : 'Test Connection'}
@@ -421,7 +422,7 @@ function ProfileForm({ profile, temperature, maxTokens, onSave, onDelete, onCanc
           <button
             type="button"
             onClick={onDelete}
-            className="p-2.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-all"
+            className="p-2.5 rounded-lg border border-destructive/30 text-destructive hover:bg-destructive/10 transition-all"
             title="Delete profile"
           >
             <Trash2 size={15} />
@@ -430,7 +431,7 @@ function ProfileForm({ profile, temperature, maxTokens, onSave, onDelete, onCanc
         <button
           type="button"
           onClick={onCancel}
-          className="p-2.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-all"
+          className="p-2.5 rounded-lg border border-border text-muted-foreground hover:bg-muted transition-all"
           title="Cancel"
         >
           ✕
@@ -463,8 +464,6 @@ export function LLMConfigSection({
   const [isCreating, setIsCreating] = useState(false);
   const [newProfile, setNewProfile] = useState<LLMProviderProfile>(makeBlankProfile());
 
-  const editingProfile = profiles.find((p) => p.id === editingId) ?? null;
-
   const handleSaveNew = async (profile: LLMProviderProfile) => {
     await onSaveProfile(profile);
     setIsCreating(false);
@@ -481,22 +480,18 @@ export function LLMConfigSection({
     if (editingId === profileId) setEditingId(null);
   };
 
-  const handleSetActive = async (profileId: string) => {
-    await onSetActive(profileId);
-  };
-
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+    <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+      <div className="px-6 py-4 border-b border-border flex items-center justify-between">
         <div>
-          <h2 className="text-base font-semibold text-slate-900">LLM Profiles</h2>
-          <p className="text-sm text-slate-500 mt-0.5">Manage API credentials and provider configurations</p>
+          <h2 className="text-base font-semibold text-foreground">LLM Profiles</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">Manage API credentials and provider configurations</p>
         </div>
         {!isCreating && (
           <button
             type="button"
             onClick={() => { setNewProfile(makeBlankProfile()); setIsCreating(true); setEditingId(null); }}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-medium transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 bg-primary hover:opacity-90 text-primary-foreground rounded-lg text-sm font-medium transition-all"
           >
             <Plus size={14} />
             Add Profile
@@ -506,12 +501,12 @@ export function LLMConfigSection({
 
       <div className="p-6 space-y-4">
         {profiles.length === 0 && !isCreating && (
-          <div className="text-center py-10 text-slate-400">
+          <div className="text-center py-10 text-muted-foreground">
             <p className="text-sm">No profiles yet.</p>
             <button
               type="button"
               onClick={() => { setNewProfile(makeBlankProfile()); setIsCreating(true); }}
-              className="mt-3 text-sm text-blue-600 hover:text-blue-700 underline underline-offset-2"
+              className="mt-3 text-sm text-primary hover:opacity-80 underline underline-offset-2"
             >
               Create your first profile
             </button>
@@ -527,52 +522,52 @@ export function LLMConfigSection({
             <div
               key={profile.id}
               className={`rounded-xl border transition-all duration-150 ${
-                isActive ? 'border-blue-300 bg-blue-50/40' : 'border-slate-200 bg-white'
+                isActive ? 'border-primary/40 bg-primary/5' : 'border-border bg-background'
               }`}
             >
               {!isEditing ? (
                 <div className="flex items-center gap-3 px-4 py-3">
                   <button
                     type="button"
-                    onClick={() => handleSetActive(profile.id)}
-                    className={`w-4 h-4 shrink-0 rounded-full border-2 transition-all ${
+                    onClick={() => onSetActive(profile.id)}
+                    className={`w-4 h-4 shrink-0 rounded-full border-2 transition-all flex items-center justify-center ${
                       isActive
-                        ? 'border-blue-500 bg-blue-500'
-                        : 'border-slate-300 hover:border-blue-400'
-                    } flex items-center justify-center`}
+                        ? 'border-primary bg-primary'
+                        : 'border-muted-foreground hover:border-primary'
+                    }`}
                   >
-                    {isActive && <span className="w-1.5 h-1.5 rounded-full bg-white block" />}
+                    {isActive && <span className="w-1.5 h-1.5 rounded-full bg-primary-foreground block" />}
                   </button>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-slate-800 truncate">{profile.name || 'Unnamed'}</span>
+                      <span className="text-sm font-semibold text-foreground truncate">{profile.name || 'Unnamed'}</span>
                       <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded border ${badge}`}>
                         {PROVIDERS.find((p) => p.id === profile.provider)?.shortLabel ?? profile.provider}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5 font-mono truncate">{profile.model}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 font-mono truncate">{profile.model}</p>
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0">
                     {isActive && (
-                      <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full mr-1">Active</span>
+                      <span className="text-xs font-medium text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full mr-1">Active</span>
                     )}
                     <button
                       type="button"
                       onClick={() => { setEditingId(profile.id); setIsCreating(false); }}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
                       title="Edit"
                     >
                       <Pencil size={14} />
                     </button>
-                    <ChevronRight size={14} className="text-slate-300" />
+                    <ChevronRight size={14} className="text-muted-foreground/50" />
                   </div>
                 </div>
               ) : (
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-4">
-                    <span className="text-sm font-semibold text-slate-700">Editing: {profile.name || 'Profile'}</span>
+                    <span className="text-sm font-semibold text-foreground">Editing: {profile.name || 'Profile'}</span>
                   </div>
                   <ProfileForm
                     profile={profile}
@@ -589,8 +584,8 @@ export function LLMConfigSection({
         })}
 
         {isCreating && (
-          <div className="rounded-xl border-2 border-dashed border-blue-200 bg-blue-50/30 p-5">
-            <p className="text-sm font-semibold text-slate-700 mb-4">New Profile</p>
+          <div className="rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 p-5">
+            <p className="text-sm font-semibold text-foreground mb-4">New Profile</p>
             <ProfileForm
               profile={newProfile}
               temperature={temperature}

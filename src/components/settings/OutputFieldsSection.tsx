@@ -18,6 +18,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Label } from '../ui/label';
 
 interface SortableFieldItemProps {
   field: OutputField;
@@ -52,34 +53,34 @@ function SortableFieldItem({ field, onRemove, isProtectedField = false }: Sortab
     <div
       ref={setNodeRef}
       style={style}
-      className="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+      className="bg-muted/40 p-3 rounded-lg border border-border hover:border-primary/30 transition-colors"
     >
       <div className="flex items-center gap-3">
         <div
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 transition-colors"
+          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Drag handle"
         >
           <GripVertical size={20} />
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-gray-800 font-medium block">{field.name}</span>
+            <span className="text-foreground font-medium block">{field.name}</span>
             {isProtectedField && (
               <>
-                <Lock size={14} className="text-gray-400" />
-                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-medium">Required</span>
+                <Lock size={14} className="text-muted-foreground" />
+                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded font-medium border border-primary/20">Required</span>
               </>
             )}
           </div>
           <div className="flex items-center gap-2 mt-1">
-            <code className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded font-mono">
+            <code className="text-xs bg-background border border-border text-muted-foreground px-2 py-1 rounded font-mono">
               {markerTag}
             </code>
             <button
               onClick={handleCopyTag}
-              className="text-gray-500 hover:text-gray-700 transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors"
               aria-label={`Copy tag for ${field.name}`}
               title="Copy tag"
             >
@@ -90,7 +91,7 @@ function SortableFieldItem({ field, onRemove, isProtectedField = false }: Sortab
         {!isProtectedField && (
           <button
             onClick={() => onRemove(field.id)}
-            className="text-red-600 hover:text-red-800 transition-colors"
+            className="text-destructive hover:opacity-80 transition-opacity"
             aria-label={`Remove ${field.name}`}
           >
             <Trash2 size={18} />
@@ -130,29 +131,36 @@ export function OutputFieldsSection({
   const protected_ = new Set(protectedFieldNames ?? ['Definition']);
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Dynamic Output Fields</h2>
-      <div className="space-y-4">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={newFieldName}
-            onChange={(e) => onNewFieldNameChange(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && onAddField()}
-            placeholder="e.g., Phonetic, Vietnamese Meaning"
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            onClick={onAddField}
-            className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition flex items-center gap-2"
-          >
-            <Plus size={18} />
-            Add
-          </button>
+    <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+      <div className="px-6 py-4 border-b border-border">
+        <h2 className="text-base font-semibold text-foreground">Dynamic Output Fields</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">Define the fields the AI will extract for each word</p>
+      </div>
+      <div className="p-6 space-y-4">
+        <div>
+          <Label className="mb-1.5">Add New Field</Label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newFieldName}
+              onChange={(e) => onNewFieldNameChange(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && onAddField()}
+              placeholder="e.g., Phonetic, Vietnamese Meaning"
+              className="flex-1 px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+            />
+            <button
+              onClick={onAddField}
+              className="bg-primary hover:opacity-90 text-primary-foreground py-2.5 px-4 rounded-lg text-sm font-medium transition flex items-center gap-2"
+            >
+              <Plus size={16} />
+              Add
+            </button>
+          </div>
         </div>
+
         <div className="space-y-2 max-h-80 overflow-y-auto">
           {outputFields.length === 0 ? (
-            <p className="text-gray-500 text-sm py-4 text-center">No fields added yet</p>
+            <p className="text-muted-foreground text-sm py-4 text-center">No fields added yet</p>
           ) : (
             <DndContext
               sensors={sensors}
@@ -177,11 +185,24 @@ export function OutputFieldsSection({
             </DndContext>
           )}
         </div>
-        <div className="text-xs text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-200">
-          <p className="font-medium mb-1">Use Marker Tags in your prompt:</p>
-          <p className="mb-2">Each field has a marker tag displayed below its name. Copy these tags and use them in your prompt template to extract specific values from the AI's response.</p>
-          <p className="font-medium mb-1">Concept Tree fields:</p>
-          <p>Add fields named <code className="bg-white px-1 rounded font-mono">Tier1</code>, <code className="bg-white px-1 rounded font-mono">Tier2</code>, <code className="bg-white px-1 rounded font-mono">Tier3</code>, and <code className="bg-white px-1 rounded font-mono">Context Definition</code> to enable the Concept Tree visualization. <code className="bg-white px-1 rounded font-mono">ConceptLink</code> is a required field that labels the relationship between Tier 3 and the word. For polysemic words, use numbered tags in your prompt (e.g. <code className="bg-white px-1 rounded font-mono">&Tier1 1&{"{}"}</code>, <code className="bg-white px-1 rounded font-mono">&Tier1 2&{"{}"}</code>) alongside <code className="bg-white px-1 rounded font-mono">&No of Definition&{"{}"}</code>.</p>
+
+        <div className="text-xs text-muted-foreground bg-primary/5 border border-primary/20 p-4 rounded-lg space-y-2">
+          <p className="font-semibold text-foreground">Use Marker Tags in your prompt:</p>
+          <p>Each field has a marker tag displayed below its name. Copy these tags and use them in your prompt template to extract specific values from the AI's response.</p>
+          <p className="font-semibold text-foreground">Concept Tree fields:</p>
+          <p>
+            Add fields named{' '}
+            <code className="bg-background border border-border px-1 rounded font-mono text-foreground">Tier1</code>,{' '}
+            <code className="bg-background border border-border px-1 rounded font-mono text-foreground">Tier2</code>,{' '}
+            <code className="bg-background border border-border px-1 rounded font-mono text-foreground">Tier3</code>, and{' '}
+            <code className="bg-background border border-border px-1 rounded font-mono text-foreground">Context Definition</code>{' '}
+            to enable the Concept Tree visualization.{' '}
+            <code className="bg-background border border-border px-1 rounded font-mono text-foreground">ConceptLink</code>{' '}
+            is a required field that labels the relationship between Tier 3 and the word. For polysemic words, use numbered tags in your prompt (e.g.{' '}
+            <code className="bg-background border border-border px-1 rounded font-mono text-foreground">&Tier1 1&{'{}'}</code>,{' '}
+            <code className="bg-background border border-border px-1 rounded font-mono text-foreground">&Tier1 2&{'{}'}</code>) alongside{' '}
+            <code className="bg-background border border-border px-1 rounded font-mono text-foreground">&No of Definition&{'{}'}</code>.
+          </p>
         </div>
       </div>
     </div>
