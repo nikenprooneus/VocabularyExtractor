@@ -210,7 +210,7 @@ export default function ReaderPage() {
     : null;
 
   return (
-    <div className="h-full flex flex-col overflow-hidden" style={{ background: '#1c1a18' }}>
+    <div className="h-full flex flex-col" style={{ background: '#1c1a18' }}>
       <input
         ref={fileInputRef}
         type="file"
@@ -220,7 +220,7 @@ export default function ReaderPage() {
       />
 
       {state.isLoaded && bookUrl ? (
-        <div className="flex-1 flex flex-col overflow-hidden relative">
+        <div className="flex-1 flex flex-col relative">
           <div
             className="absolute top-0 left-0 right-0 z-10 flex items-center gap-3 px-4 h-14"
             style={{
@@ -361,7 +361,7 @@ export default function ReaderPage() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-hidden" style={{ WebkitUserSelect: 'text', userSelect: 'text', touchAction: 'auto' }}>
+          <div className="flex-1" style={{ WebkitUserSelect: 'text', userSelect: 'text', touchAction: 'auto' }}>
             <ReactReader
               key={`${state.bookId ?? 'no-book'}-${readMode}`}
               url={bookUrl!}

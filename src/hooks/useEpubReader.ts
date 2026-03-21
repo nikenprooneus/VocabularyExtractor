@@ -173,6 +173,8 @@ export function useEpubReader() {
           };
           addSelectionStyles(doc.documentElement);
           addSelectionStyles(doc.body);
+          doc.documentElement.style.setProperty('overflow', 'visible', 'important');
+          doc.body?.style.setProperty('overflow', 'visible', 'important');
           if (doc.body) {
             doc.body.style.touchAction = 'pan-y pinch-zoom';
           }
