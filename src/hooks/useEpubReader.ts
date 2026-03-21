@@ -175,8 +175,10 @@ export function useEpubReader() {
           addSelectionStyles(doc.body);
           doc.documentElement.style.setProperty('overflow', 'visible', 'important');
           doc.body?.style.setProperty('overflow', 'visible', 'important');
+          doc.documentElement.style.setProperty('touch-action', 'auto', 'important');
+          doc.body?.style.setProperty('touch-action', 'auto', 'important');
           if (doc.body) {
-            doc.body.style.touchAction = 'pan-y pinch-zoom';
+            doc.body.style.touchAction = 'auto';
           }
 
           contents.document.addEventListener('touchstart', () => {
