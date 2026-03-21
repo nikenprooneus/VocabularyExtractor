@@ -1,6 +1,21 @@
 import { APIConfig, GeneratedResult, OutputField } from '../types/index';
 import { ApiJsonSchema } from '../utils/schemaBuilder';
 
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 60000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('Request timed out after 60s. Check your connection and try again.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 const PROVIDER_BASE_URLS: Record<string, string> = {
   openai: 'https://api.openai.com/v1',
   anthropic: 'https://api.anthropic.com',
@@ -46,7 +61,7 @@ async function callOpenAICompatible(
     };
   }
 
-  const response = await fetch(`${baseUrl}/chat/completions`, {
+  const response = await fetchWithTimeout(`${baseUrl}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -95,7 +110,7 @@ async function callAnthropic(
     body.tool_choice = { type: 'tool', name: 'vocabulary_extraction' };
   }
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -145,7 +160,7 @@ async function callGemini(
     generationConfig.responseSchema = jsonSchema;
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -169,21 +184,22 @@ async function assertJsonResponse(response: Response): Promise<void> {
     throw new Error('Received HTML instead of JSON. Check your API endpoint or Base URL.');
   }
   if (!response.ok) {
-    let errorMessage = `API error: ${response.status}`;
+    const statusPrefix = `API Error (${response.status})`;
+    let detail: string | null = null;
     try {
       const error = await response.clone().json();
-      errorMessage =
+      detail =
         error.error?.message ??
         error.message ??
         error.error_message ??
-        errorMessage;
+        null;
     } catch {
       const text = await response.text();
       if (text.includes('<!doctype') || text.includes('<html')) {
-        errorMessage = 'Invalid API endpoint. Verify your Base URL.';
+        detail = 'Invalid API endpoint. Verify your Base URL.';
       }
     }
-    throw new Error(errorMessage);
+    throw new Error(detail ? `${statusPrefix}: ${detail}` : statusPrefix);
   }
 }
 

@@ -238,7 +238,10 @@ export function useVocabularyGenerator(settings: Settings): VocabularyGeneratorS
 
   const handleDisambiguationGenerateNew = useCallback(async (word: string, example: string): Promise<void> => {
     setDisambiguationContexts(null);
-    if (!isSettingsConfigured) return;
+    if (!isSettingsConfigured) {
+      toast.error('API Key missing. Please configure your AI Provider in Settings.');
+      return;
+    }
     setIsLoading(true);
     try {
       const { tmrndResult, ctMeaning, ctRaw } = await runApiCalls(word, example);
