@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import type { Rendition } from 'epubjs';
 import { EpubCFI } from 'epubjs';
 import { useAuth } from '../contexts/AuthContext';
@@ -177,10 +178,14 @@ export function useEpubReader() {
         const buildCfi = (range: Range): string => {
           try {
             if (contents.cfiBase) {
-              return new EpubCFI(range, contents.cfiBase).toString();
+              const cfi = new EpubCFI(range, contents.cfiBase).toString();
+              toast.success('CFI Math Success!', { id: 'cfi-success' });
+              return cfi;
+            } else {
+              toast.error('Missing cfiBase', { id: 'cfi-error-base' });
             }
-          } catch (err) {
-            console.warn('Mobile CFI generation failed', err);
+          } catch (err: any) {
+            toast.error('CFI Error: ' + (err.message || 'Unknown'), { id: 'cfi-error' });
           }
           return '';
         };
@@ -191,6 +196,7 @@ export function useEpubReader() {
             if (!sel || sel.rangeCount === 0) return null;
             const text = sel.toString().trim();
             if (!text) return null;
+            toast('Mobile Sel: ' + text.substring(0, 10) + '...', { id: 'sel-text' });
             const range = sel.getRangeAt(0).cloneRange();
             const contextText = range.commonAncestorContainer?.textContent?.trim() || text;
             return { text, contextText, range };
@@ -201,7 +207,11 @@ export function useEpubReader() {
 
         const commitSnapshot = (snapshot: { text: string; contextText: string; range: Range }) => {
           const cfi = buildCfi(snapshot.range);
-          if (!cfi) return;
+          if (!cfi) {
+            toast.error('Commit failed: Empty CFI', { id: 'commit-fail' });
+            return;
+          }
+          toast.success('State Set! Popover should appear', { id: 'state-set' });
           setPendingSelection(prev => {
             if (prev && prev.text === snapshot.text) return prev;
             return {
