@@ -9,12 +9,6 @@ import {
 import { deleteCachedEpubBlob } from '../../services/epubCacheService';
 import type { ReadingProgress } from '../../types';
 
-const SAMPLE_BOOK = {
-  title: "Alice's Adventures in Wonderland",
-  author: 'Lewis Carroll',
-  url: 'https://www.gutenberg.org/cache/epub/11/pg11.epub',
-};
-
 interface BookshelfPanelProps {
   onOpenFile: (file: File) => void;
 }
@@ -26,7 +20,6 @@ export function BookshelfPanel({ onOpenFile }: BookshelfPanelProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [library, setLibrary] = useState<ReadingProgress[]>([]);
   const [loadingLibrary, setLoadingLibrary] = useState(true);
-  const [loadingSample, setLoadingSample] = useState(false);
   const [openingBookId, setOpeningBookId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,22 +62,6 @@ export function BookshelfPanel({ onOpenFile }: BookshelfPanelProps) {
   };
 
   const handleDragLeave = () => setIsDragging(false);
-
-  const handleLoadSample = async () => {
-    setLoadingSample(true);
-    setError(null);
-    try {
-      const res = await fetch(SAMPLE_BOOK.url);
-      if (!res.ok) throw new Error('Download failed');
-      const blob = await res.blob();
-      const file = new File([blob], 'alice-in-wonderland.epub', { type: 'application/epub+zip' });
-      onOpenFile(file);
-    } catch {
-      setError('Failed to download the sample book. Please try uploading an EPUB manually.');
-    } finally {
-      setLoadingSample(false);
-    }
-  };
 
   const handleOpenFromLibrary = async (book: ReadingProgress) => {
     if (openingBookId) return;
@@ -164,29 +141,6 @@ export function BookshelfPanel({ onOpenFile }: BookshelfPanelProps) {
           {error}
         </p>
       )}
-
-      <div className="flex items-center gap-3 mb-6">
-        <div className="flex-1 h-px bg-[#2e2c29]" />
-        <span className="text-[10px] text-[#4e4c49] uppercase tracking-wider">or try a sample</span>
-        <div className="flex-1 h-px bg-[#2e2c29]" />
-      </div>
-
-      <button
-        onClick={handleLoadSample}
-        disabled={loadingSample}
-        className="w-full flex items-center gap-3 px-4 py-3 bg-[#2e2c29] hover:bg-[#3a3835] border border-[#3e3c39] rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-8"
-      >
-        <div className="w-9 h-12 bg-[#c9a96e]/10 border border-[#c9a96e]/20 rounded flex items-center justify-center flex-shrink-0">
-          <BookOpen size={16} className="text-[#c9a96e]" />
-        </div>
-        <div className="flex-1 min-w-0 text-left">
-          <p className="text-sm font-medium text-[#e8e4de] truncate">{SAMPLE_BOOK.title}</p>
-          <p className="text-xs text-[#6b6762]">{SAMPLE_BOOK.author} · Project Gutenberg</p>
-        </div>
-        {loadingSample && (
-          <div className="w-4 h-4 border-2 border-[#c9a96e]/30 border-t-[#c9a96e] rounded-full animate-spin flex-shrink-0" />
-        )}
-      </button>
 
       {!loadingLibrary && library.length > 0 && (
         <div>

@@ -320,9 +320,11 @@ export function useEpubReader() {
           // non-fatal
         }
 
+        let startLocation: string | number = 0;
         try {
           const saved = await fetchReadingProgressByBookId(user.id, bookId);
           if (saved?.cfi) {
+            startLocation = saved.cfi;
             pendingCfiRef.current = saved.cfi;
             currentCfiRef.current = saved.cfi;
             currentPercentageRef.current = saved.percentage ?? 0;
@@ -332,7 +334,7 @@ export function useEpubReader() {
           // non-fatal
         }
 
-        setLocation(0);
+        setLocation(startLocation);
         setBookBuffer(buffer);
 
         setState(s => ({
