@@ -2,15 +2,48 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer utilities {
-  .duration-120 {
-    transition-duration: 120ms;
+@layer base {
+  :root {
+    --background: 30 10% 9%;
+    --foreground: 36 20% 88%;
+
+    --card: 30 10% 12%;
+    --card-foreground: 36 20% 88%;
+
+    --popover: 30 10% 11%;
+    --popover-foreground: 36 20% 88%;
+
+    --primary: 43 74% 52%;
+    --primary-foreground: 30 10% 9%;
+
+    --secondary: 30 10% 16%;
+    --secondary-foreground: 36 20% 80%;
+
+    --muted: 30 10% 15%;
+    --muted-foreground: 36 10% 55%;
+
+    --accent: 30 10% 18%;
+    --accent-foreground: 36 20% 88%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 30 10% 20%;
+    --input: 30 10% 18%;
+    --ring: 43 74% 52%;
+
+    --radius: 0.5rem;
   }
 }
 
 @layer base {
+  * {
+    @apply border-border;
+  }
+
   body {
-    @apply antialiased;
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 
   input, textarea, select {
@@ -18,28 +51,30 @@
   }
 }
 
+@layer utilities {
+  .duration-120 {
+    transition-duration: 120ms;
+  }
+}
+
 @layer components {
   .btn-primary {
-    @apply bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition;
+    @apply bg-primary hover:opacity-90 text-primary-foreground py-2 px-4 rounded-lg font-medium transition;
   }
 
   .btn-secondary {
-    @apply bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg font-medium transition;
+    @apply bg-secondary hover:bg-accent text-secondary-foreground py-2 px-4 rounded-lg font-medium transition;
   }
 
   .btn-success {
-    @apply bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-medium transition;
+    @apply bg-green-700 hover:bg-green-600 text-white py-2 px-4 rounded-lg font-medium transition;
   }
 
   .input-field {
-    @apply px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500;
+    @apply px-3 py-2 border border-border bg-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring;
   }
 
   .card {
-    @apply bg-white rounded-lg shadow p-6;
-  }
-
-  .hover\:scale-102:hover {
-    transform: scale(1.02);
+    @apply bg-card rounded-lg shadow p-6 border border-border;
   }
 }

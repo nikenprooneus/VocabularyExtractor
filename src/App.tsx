@@ -19,7 +19,30 @@ function App() {
       <AuthProvider>
         <SettingsProvider>
           <ConceptProvider>
-          <Toaster position="top-right" />
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: 'hsl(30 10% 12%)',
+                color: 'hsl(36 20% 88%)',
+                border: '1px solid hsl(30 10% 20%)',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+              },
+              success: {
+                iconTheme: {
+                  primary: 'hsl(43 74% 52%)',
+                  secondary: 'hsl(30 10% 9%)',
+                },
+              },
+              error: {
+                iconTheme: {
+                  primary: 'hsl(0 62% 50%)',
+                  secondary: 'hsl(30 10% 9%)',
+                },
+              },
+            }}
+          />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />

@@ -25,6 +25,7 @@
     "react-hot-toast": "^2.6.0",
     "react-reader": "^2.0.15",
     "react-router-dom": "^7.13.1",
+    "tailwind-merge": "^3.5.0",
     "three": "^0.183.2",
     "three-spritetext": "^1.10.0",
     "zod": "^4.3.6",
