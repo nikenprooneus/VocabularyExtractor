@@ -321,7 +321,7 @@ export interface GraphFilters {
 
 // ─── Annotation Types ─────────────────────────────────────────────────────────
 
-export type AnnotationColor = 'yellow' | 'green' | 'blue' | 'pink';
+export type AnnotationColor = 'yellow' | 'green' | 'blue' | 'pink' | 'gray';
 
 export interface Annotation {
   id: string;
@@ -347,10 +347,19 @@ export interface DatabaseAnnotation {
   updated_at: string;
 }
 
+export interface SelectionRect {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  bottom: number;
+  right: number;
+}
+
 export interface PendingSelection {
   cfi: string;
   text: string;
-  rect: DOMRect;
+  rect: SelectionRect;
 }
 
 // ─── Reader / EPUB Types ──────────────────────────────────────────────────────

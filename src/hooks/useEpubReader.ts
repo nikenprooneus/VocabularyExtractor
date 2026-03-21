@@ -15,7 +15,7 @@ import {
   updateAnnotationColor,
   deleteAnnotation,
 } from '../services/annotationService';
-import type { EpubTocItem, ReaderState, Annotation, AnnotationColor, PendingSelection } from '../types';
+import type { EpubTocItem, ReaderState, Annotation, AnnotationColor, PendingSelection, SelectionRect } from '../types';
 
 const PROGRESS_SAVE_DEBOUNCE_MS = 1500;
 
@@ -26,6 +26,7 @@ const HIGHLIGHT_COLORS: Record<AnnotationColor, string> = {
   green:  'rgba(134, 239, 172, 0.45)',
   blue:   'rgba(147, 197, 253, 0.45)',
   pink:   'rgba(249, 168, 212, 0.45)',
+  gray:   'rgba(169, 169, 169, 0.45)',
 };
 
 const initialState: ReaderState = {
@@ -99,7 +100,7 @@ export function useEpubReader() {
   const [readMode, setReadModeState] = useState<ReadMode>('paginated');
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
-  const [activeAnnotation, setActiveAnnotation] = useState<{ annotation: Annotation; rect: DOMRect } | null>(null);
+  const [activeAnnotation, setActiveAnnotation] = useState<{ annotation: Annotation; rect: SelectionRect } | null>(null);
 
   const foliateViewRef = useRef<HTMLElement | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -199,17 +200,19 @@ export function useEpubReader() {
 
         if (!cfi) return;
 
-        const iframeRect = foliateEl.getBoundingClientRect();
-        const localRect = range.getBoundingClientRect();
+        const iframeContainerRect = foliateEl.getBoundingClientRect();
+        const selectionRectInIframe = range.getBoundingClientRect();
 
-        const viewportRect = new DOMRect(
-          iframeRect.left + localRect.left,
-          iframeRect.top + localRect.top,
-          localRect.width,
-          localRect.height
-        );
+        const absoluteRect: SelectionRect = {
+          top: iframeContainerRect.top + selectionRectInIframe.bottom,
+          left: iframeContainerRect.left + selectionRectInIframe.left,
+          width: selectionRectInIframe.width,
+          height: selectionRectInIframe.height,
+          bottom: iframeContainerRect.top + selectionRectInIframe.bottom,
+          right: iframeContainerRect.left + selectionRectInIframe.right,
+        };
 
-        setPendingSelection({ cfi, text, rect: viewportRect });
+        setPendingSelection({ cfi, text, rect: absoluteRect });
         setActiveAnnotation(null);
       };
 
@@ -242,15 +245,15 @@ export function useEpubReader() {
 
   // ─── Annotation actions ──────────────────────────────────────────────────────
 
-  const handleHighlight = useCallback(
-    async (color: AnnotationColor) => {
+  const handleSave = useCallback(
+    async (color: AnnotationColor, note?: string) => {
       if (!pendingSelection || !user || !currentBookIdRef.current) return;
 
       const { cfi, text } = pendingSelection;
       setPendingSelection(null);
 
       const bookId = currentBookIdRef.current;
-      const annotation = await createAnnotation(user.id, bookId, cfi, text, color);
+      const annotation = await createAnnotation(user.id, bookId, cfi, text, color, note ?? '');
 
       setAnnotations(prev => [...prev, annotation]);
 
@@ -506,7 +509,7 @@ export function useEpubReader() {
     pendingSelection,
     activeAnnotation,
     setActiveAnnotation,
-    handleHighlight,
+    handleSave,
     handleAnnotationColorChange,
     handleAnnotationNoteChange,
     handleAnnotationDelete,

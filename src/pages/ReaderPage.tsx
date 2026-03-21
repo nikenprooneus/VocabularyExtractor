@@ -22,7 +22,7 @@ export default function ReaderPage() {
     closeBook,
     pendingSelection,
     activeAnnotation,
-    handleHighlight,
+    handleSave,
     handleAnnotationColorChange,
     handleAnnotationNoteChange,
     handleAnnotationDelete,
@@ -193,7 +193,7 @@ export default function ReaderPage() {
         <AnnotationPopover
           mode="new"
           selection={pendingSelection}
-          onHighlight={handleHighlight}
+          onSave={handleSave}
           onDismiss={dismissPopover}
         />
       )}
