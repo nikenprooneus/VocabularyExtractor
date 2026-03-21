@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { Rendition } from 'epubjs';
+import { EpubCFI } from 'epubjs';
 import { useAuth } from '../contexts/AuthContext';
 import {
   fetchReadingProgressByBookId,
@@ -175,14 +176,13 @@ export function useEpubReader() {
 
         const buildCfi = (range: Range): string => {
           try {
-            const EpubCFI = (rendition as any).book?.EpubCFI ?? (rendition as any).epubjs?.EpubCFI;
-            if (EpubCFI && contents.cfiBase) {
+            if (contents.cfiBase) {
               return new EpubCFI(range, contents.cfiBase).toString();
             }
-          } catch {
-            // fall through
+          } catch (err) {
+            console.warn('Mobile CFI generation failed', err);
           }
-          return (rendition as any).currentLocation?.()?.start?.cfi ?? '';
+          return '';
         };
 
         const snapshotSelection = (): { text: string; contextText: string; range: Range } | null => {
@@ -201,6 +201,7 @@ export function useEpubReader() {
 
         const commitSnapshot = (snapshot: { text: string; contextText: string; range: Range }) => {
           const cfi = buildCfi(snapshot.range);
+          if (!cfi) return;
           setPendingSelection(prev => {
             if (prev && prev.text === snapshot.text) return prev;
             return {
