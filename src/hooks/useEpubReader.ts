@@ -161,68 +161,89 @@ export function useEpubReader() {
       });
 
       rendition.hooks.content.register((contents: any) => {
-        const isTouchDevice = () =>
-          typeof window !== 'undefined' &&
-          (navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches);
+        const buildCfi = (range: Range): string => {
+          try {
+            const EpubCFI = (rendition as any).book?.EpubCFI ?? (rendition as any).epubjs?.EpubCFI;
+            if (EpubCFI && contents.cfiBase) {
+              return new EpubCFI(range, contents.cfiBase).toString();
+            }
+          } catch {
+            // fall through
+          }
+          return (rendition as any).currentLocation?.()?.start?.cfi ?? '';
+        };
 
-        const commitSelection = () => {
+        const snapshotSelection = (): { text: string; contextText: string; range: Range } | null => {
           try {
             const sel = contents.window.getSelection();
-            if (!sel || sel.rangeCount === 0) return;
+            if (!sel || sel.rangeCount === 0) return null;
             const text = sel.toString().trim();
-            if (!text) return;
-            const range = sel.getRangeAt(0);
-            const contextText = range?.commonAncestorContainer?.textContent?.trim() || text;
-
-            let cfiRange = '';
-            try {
-              const EpubCFI = (rendition as any).book?.EpubCFI ?? (rendition as any).epubjs?.EpubCFI;
-              if (EpubCFI && contents.cfiBase) {
-                cfiRange = new EpubCFI(range, contents.cfiBase).toString();
-              }
-            } catch {
-              // fall back to page-level CFI
-            }
-            if (!cfiRange) {
-              cfiRange = (rendition as any).currentLocation?.()?.start?.cfi ?? '';
-            }
-
-            setPendingSelection(prev => {
-              if (prev && prev.text === text) return prev;
-              return {
-                cfi: cfiRange,
-                text,
-                contextText,
-                rect: { top: 0, left: 0, width: 0, height: 0, bottom: 0, right: 0 },
-              };
-            });
-            setActiveAnnotation(null);
+            if (!text) return null;
+            const range = sel.getRangeAt(0).cloneRange();
+            const contextText = range.commonAncestorContainer?.textContent?.trim() || text;
+            return { text, contextText, range };
           } catch {
-            // non-fatal
+            return null;
           }
         };
 
-        const onTouchEnd = () => {
-          setTimeout(commitSelection, 50);
+        const commitSnapshot = (snapshot: { text: string; contextText: string; range: Range }) => {
+          const cfi = buildCfi(snapshot.range);
+          setPendingSelection(prev => {
+            if (prev && prev.text === snapshot.text) return prev;
+            return {
+              cfi,
+              text: snapshot.text,
+              contextText: snapshot.contextText,
+              rect: { top: 0, left: 0, width: 0, height: 0, bottom: 0, right: 0 },
+            };
+          });
+          setActiveAnnotation(null);
         };
 
-        const onPointerUp = (e: PointerEvent) => {
-          if (e.pointerType === 'touch' || e.pointerType === 'pen') {
-            setTimeout(commitSelection, 50);
-          }
+        let pendingSnapshot: { text: string; contextText: string; range: Range } | null = null;
+        let commitTimer: ReturnType<typeof setTimeout> | null = null;
+
+        const scheduleCommit = (snapshot: { text: string; contextText: string; range: Range }) => {
+          pendingSnapshot = snapshot;
+          if (commitTimer) clearTimeout(commitTimer);
+          commitTimer = setTimeout(() => {
+            if (pendingSnapshot) commitSnapshot(pendingSnapshot);
+            pendingSnapshot = null;
+          }, 80);
         };
-
-        contents.document.addEventListener('touchend', onTouchEnd, { passive: true });
-        contents.document.addEventListener('pointerup', onPointerUp, { passive: true });
-
-        const selectionDebounceMs = isTouchDevice() ? 300 : 100;
-        let selectionTimer: ReturnType<typeof setTimeout> | null = null;
 
         contents.document.addEventListener('selectionchange', () => {
-          const selection = contents.window.getSelection();
-          if (!selection || selection.toString().trim().length === 0) return;
-          if (selectionTimer) clearTimeout(selectionTimer);
-          selectionTimer = setTimeout(commitSelection, selectionDebounceMs);
+          const snapshot = snapshotSelection();
+          if (!snapshot) return;
+          scheduleCommit(snapshot);
+        });
+
+        contents.document.addEventListener('touchend', () => {
+          const snapshot = snapshotSelection();
+          if (snapshot) {
+            if (commitTimer) clearTimeout(commitTimer);
+            pendingSnapshot = snapshot;
+            commitTimer = setTimeout(() => {
+              if (pendingSnapshot) commitSnapshot(pendingSnapshot);
+              pendingSnapshot = null;
+            }, 300);
+          } else if (pendingSnapshot) {
+            const snap = pendingSnapshot;
+            if (commitTimer) clearTimeout(commitTimer);
+            commitTimer = setTimeout(() => {
+              commitSnapshot(snap);
+              pendingSnapshot = null;
+            }, 300);
+          }
+        }, { passive: true });
+
+        contents.document.addEventListener('mouseup', () => {
+          const snapshot = snapshotSelection();
+          if (!snapshot) return;
+          if (commitTimer) clearTimeout(commitTimer);
+          commitSnapshot(snapshot);
+          pendingSnapshot = null;
         });
       });
 
