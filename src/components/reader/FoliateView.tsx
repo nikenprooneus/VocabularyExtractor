@@ -134,6 +134,26 @@ export const FoliateView = forwardRef<FoliateViewHandle, FoliateViewProps>(
       renderer.setAttribute('gap', '5%');
       renderer.setAttribute('max-inline-size', '720');
       renderer.setAttribute('margin', '10');
+      const container = containerRef.current;
+      if (container) {
+        const h = container.getBoundingClientRect().height;
+        if (h > 0) {
+          renderer.setAttribute('max-block-size', String(Math.floor(h - 20)));
+        }
+      }
+    };
+
+    const updateBlockSize = () => {
+      const container = containerRef.current;
+      if (!container) return;
+      const h = container.getBoundingClientRect().height;
+      if (h <= 0) return;
+      const view = viewRef.current as unknown as {
+        renderer?: HTMLElement & { setAttribute: (k: string, v: string) => void };
+      };
+      if (view?.renderer) {
+        view.renderer.setAttribute('max-block-size', String(Math.floor(h - 20)));
+      }
     };
 
     const injectBookStyles = (doc: Document, override?: { fontSize?: number; fontFamily?: string }) => {
@@ -417,8 +437,14 @@ export const FoliateView = forwardRef<FoliateViewHandle, FoliateViewProps>(
 
       init().catch(console.error);
 
+      const resizeObserver = new ResizeObserver(() => {
+        updateBlockSize();
+      });
+      resizeObserver.observe(container);
+
       return () => {
         mounted = false;
+        resizeObserver.disconnect();
         if (viewEl) {
           try {
             (viewEl as unknown as { close?: () => void }).close?.();
