@@ -361,7 +361,7 @@ export default function ReaderPage() {
             </div>
           </div>
 
-          <div id="reader-container" className="flex-1 relative" style={{ WebkitUserSelect: 'text', userSelect: 'text', touchAction: 'auto' }}>
+          <div id="reader-container" className="flex-1 relative">
             <ReactReader
               key={`${state.bookId ?? 'no-book'}-${readMode}`}
               url={bookUrl!}

@@ -59,7 +59,10 @@ export function useEpubReader() {
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
   const [activeAnnotation, setActiveAnnotation] = useState<{ annotation: Annotation } | null>(null);
-  const [readMode, setReadMode] = useState<ReadMode>('paginated');
+  const [readMode, setReadMode] = useState<ReadMode>(() => {
+    const isTouch = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    return isTouch ? 'scrolled' : 'paginated';
+  });
   const [fontSize, setFontSize] = useState<number>(100);
   const [fontFamily, setFontFamily] = useState<string>('System Default');
 
