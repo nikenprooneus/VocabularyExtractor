@@ -73,7 +73,7 @@ export function FlashcardBuilderSection({
               return (
                 <div key={config.id} className="border border-border rounded-xl p-4 bg-muted/20">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-foreground text-sm">Card {index + 1}</h3>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Card {index + 1}</h3>
                     <button
                       onClick={() => onDeleteCard(config.id)}
                       className="text-destructive hover:opacity-80 transition-opacity"
@@ -83,7 +83,7 @@ export function FlashcardBuilderSection({
                     </button>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label className="mb-1.5">
                         Front Field <span className="text-destructive normal-case font-normal">*</span>
