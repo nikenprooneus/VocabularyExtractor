@@ -61,23 +61,23 @@ export async function upsertReadingProgress(
     percentage?: number | null;
   }
 ): Promise<ReadingProgress> {
+  const payload: Record<string, unknown> = {
+    user_id: userId,
+    book_id: bookId,
+    last_opened_at: new Date().toISOString(),
+  };
+
+  if ('bookTitle' in fields) payload.book_title = fields.bookTitle ?? '';
+  if ('bookAuthor' in fields) payload.book_author = fields.bookAuthor ?? null;
+  if ('coverUrl' in fields) payload.cover_url = fields.coverUrl ?? null;
+  if ('fileUrl' in fields) payload.file_url = fields.fileUrl ?? null;
+  if ('fileName' in fields) payload.file_name = fields.fileName ?? null;
+  if ('cfi' in fields) payload.cfi = fields.cfi ?? null;
+  if ('percentage' in fields) payload.percentage = fields.percentage ?? null;
+
   const { data, error } = await supabase
     .from('reading_progress')
-    .upsert(
-      {
-        user_id: userId,
-        book_id: bookId,
-        book_title: fields.bookTitle ?? '',
-        book_author: fields.bookAuthor ?? null,
-        cover_url: fields.coverUrl ?? null,
-        file_url: fields.fileUrl ?? null,
-        file_name: fields.fileName ?? null,
-        cfi: fields.cfi ?? null,
-        percentage: fields.percentage ?? null,
-        last_opened_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id,book_id' }
-    )
+    .upsert(payload, { onConflict: 'user_id,book_id' })
     .select()
     .single();
 
