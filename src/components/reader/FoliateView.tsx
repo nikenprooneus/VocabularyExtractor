@@ -133,7 +133,7 @@ export const FoliateView = forwardRef<FoliateViewHandle, FoliateViewProps>(
       renderer.setAttribute('flow', pendingFlowRef.current);
       renderer.setAttribute('gap', '5%');
       renderer.setAttribute('max-inline-size', '720');
-      renderer.setAttribute('margin', '42');
+      renderer.setAttribute('margin', '10');
     };
 
     const injectBookStyles = (doc: Document, override?: { fontSize?: number; fontFamily?: string }) => {

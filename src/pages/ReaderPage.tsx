@@ -112,9 +112,9 @@ export default function ReaderPage() {
         <div className="flex-1 flex flex-col relative overflow-hidden">
           {state.isLoaded && (
             <div
-              className="absolute top-0 left-0 right-0 z-10 flex items-center gap-3 px-4 h-14"
+              className="absolute top-0 left-0 right-0 z-10 flex items-center gap-3 px-4 h-9"
               style={{
-                background: 'linear-gradient(to bottom, rgba(28,26,24,0.98) 60%, rgba(28,26,24,0))',
+                background: 'linear-gradient(to bottom, rgba(28,26,24,0.98) 50%, rgba(28,26,24,0))',
                 pointerEvents: 'none',
               }}
             >
@@ -308,9 +308,9 @@ export default function ReaderPage() {
 
           {state.isLoaded && (
             <div
-              className="absolute bottom-0 left-0 right-0 z-10 flex items-center gap-3 px-4 h-10"
+              className="absolute bottom-0 left-0 right-0 z-10 flex items-center gap-3 px-4 h-8"
               style={{
-                background: 'linear-gradient(to top, rgba(28,26,24,0.98) 60%, rgba(28,26,24,0))',
+                background: 'linear-gradient(to top, rgba(28,26,24,0.98) 50%, rgba(28,26,24,0))',
                 pointerEvents: 'none',
               }}
             >
