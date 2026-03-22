@@ -95,14 +95,6 @@ export function PromptTemplateSection({
                 {' '}— Your saved concept hierarchy (auto-injected at generate time)
               </li>
             </ul>
-            <p className="font-semibold text-foreground">Polysemic (multiple meanings) tags:</p>
-            <p>Use a count tag followed by numbered field tags to extract multiple meanings:</p>
-            <code className="block bg-background border border-border px-3 py-2 rounded font-mono text-foreground mb-1">
-              &No of Definition&{`{2}`}
-            </code>
-            <code className="block bg-background border border-border px-3 py-2 rounded font-mono text-foreground">
-              &Tier1 1&{`{abstract}`} &Tier1 2&{`{concrete}`}
-            </code>
             <p>
               Fields like{' '}
               <code className="bg-background border border-border px-1 rounded font-mono text-foreground">Tier1</code>,{' '}
