@@ -200,57 +200,57 @@ export function useEpubReader() {
         }
 
         try {
-          let currentSelectionCache: { text: string; range: Range; contextText: string } | null = null;
-          let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+          let selectionCache: { text: string; range: Range; contextText: string } | null = null;
+
+          const tryFireSelection = () => {
+            if (!selectionCache) return;
+            try {
+              const sel = contents.window.getSelection();
+              const currentText = sel ? sel.toString().trim() : '';
+              if (!currentText) {
+                selectionCache = null;
+                return;
+              }
+              const cfi = new EpubCFI(selectionCache.range, contents.cfiBase).toString();
+              setPendingSelection({
+                cfi,
+                text: selectionCache.text,
+                contextText: selectionCache.contextText,
+                rect: { top: 0, left: 0, width: 0, height: 0, bottom: 0, right: 0 },
+              });
+              setActiveAnnotation(null);
+            } catch (err) {
+              console.error('CFI generation failed:', err);
+            }
+          };
 
           contents.document.addEventListener('selectionchange', () => {
             try {
               const sel = contents.window.getSelection();
-              if (!sel || sel.rangeCount === 0) return;
-
-              const text = sel.toString().trim();
-
-              if (text) {
-                const range = sel.getRangeAt(0).cloneRange();
-                const contextText = range.commonAncestorContainer?.textContent?.trim() || text;
-
-                currentSelectionCache = { text, range, contextText };
-
-                if (debounceTimer) clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => {
-                  if (currentSelectionCache && contents.cfiBase) {
-                    try {
-                      const cfi = new EpubCFI(currentSelectionCache.range, contents.cfiBase).toString();
-                      setPendingSelection({
-                        cfi,
-                        text: currentSelectionCache.text,
-                        contextText: currentSelectionCache.contextText,
-                        rect: { top: 0, left: 0, width: 0, height: 0, bottom: 0, right: 0 },
-                      });
-                      setActiveAnnotation(null);
-                    } catch (err) {
-                      console.error('CFI generation failed:', err);
-                    }
-                  }
-                }, 500);
+              if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+                selectionCache = null;
+                return;
               }
+              const text = sel.toString().trim();
+              if (!text) {
+                selectionCache = null;
+                return;
+              }
+              const range = sel.getRangeAt(0).cloneRange();
+              const contextText = range.commonAncestorContainer?.textContent?.trim() || text;
+              selectionCache = { text, range, contextText };
             } catch {
               // non-fatal
             }
           });
 
           contents.document.addEventListener('touchend', () => {
-            setTimeout(() => {
-              try {
-                const sel = contents.window.getSelection();
-                if (!sel || sel.isCollapsed) {
-                  currentSelectionCache = null;
-                }
-              } catch {
-                // non-fatal
-              }
-            }, 100);
+            setTimeout(tryFireSelection, 300);
           }, { passive: true });
+
+          contents.document.addEventListener('mouseup', () => {
+            setTimeout(tryFireSelection, 50);
+          });
         } catch {
           // non-fatal
         }
