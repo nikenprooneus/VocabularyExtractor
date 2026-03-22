@@ -164,23 +164,41 @@ export function useEpubReader() {
 
       rendition.hooks.content.register((contents: any) => {
         try {
-          const doc = contents.document;
-          const addSelectionStyles = (el: HTMLElement | null) => {
-            if (!el) return;
-            el.style.setProperty('-webkit-user-select', 'text', 'important');
-            el.style.setProperty('user-select', 'text', 'important');
-            el.style.setProperty('-webkit-touch-callout', 'default', 'important');
-          };
-          addSelectionStyles(doc.documentElement);
-          addSelectionStyles(doc.body);
-          doc.documentElement.style.setProperty('overflow', 'visible', 'important');
-          doc.body?.style.setProperty('overflow', 'visible', 'important');
-          doc.documentElement.style.setProperty('touch-action', 'auto', 'important');
-          doc.body?.style.setProperty('touch-action', 'auto', 'important');
-          if (doc.body) {
-            doc.body.style.touchAction = 'auto';
-          }
+          const style = contents.document.createElement('style');
+          style.innerHTML = `
+            * {
+              -webkit-user-select: text !important;
+              user-select: text !important;
+              -webkit-touch-callout: default !important;
+            }
+            html, body {
+              -webkit-user-select: text !important;
+              user-select: text !important;
+              -webkit-touch-callout: default !important;
+              touch-action: auto !important;
+            }
+          `;
+          contents.document.head.appendChild(style);
+        } catch (err) {
+          console.warn("Failed to inject CSS", err);
+        }
 
+        try {
+          const iframe = contents.window.frameElement as HTMLIFrameElement;
+          if (iframe) {
+            iframe.removeAttribute('scrolling');
+            const observer = new MutationObserver(() => {
+              if (iframe.hasAttribute('scrolling')) {
+                iframe.removeAttribute('scrolling');
+              }
+            });
+            observer.observe(iframe, { attributes: true, attributeFilter: ['scrolling'] });
+          }
+        } catch (err) {
+          console.warn("Failed to observe iframe", err);
+        }
+
+        try {
           contents.document.addEventListener('touchstart', () => {
             if (!contents.document.hasFocus()) {
               contents.window.focus();
