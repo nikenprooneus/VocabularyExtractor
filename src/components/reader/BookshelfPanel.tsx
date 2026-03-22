@@ -63,23 +63,30 @@ export function BookshelfPanel({ onOpenFile }: BookshelfPanelProps) {
 
   const handleDragLeave = () => setIsDragging(false);
 
+  const getDisplayTitle = (book: ReadingProgress): string => {
+    if (book.bookTitle) return book.bookTitle;
+    if (book.fileName) return book.fileName.replace(/\.epub$/i, '');
+    return 'Unknown Book';
+  };
+
   const handleOpenFromLibrary = async (book: ReadingProgress) => {
     if (openingBookId) return;
     setOpeningBookId(book.bookId);
     setError(null);
+    const displayTitle = getDisplayTitle(book);
     try {
       const file = await resolveEpubFile(
         book.bookId,
-        book.fileName ?? `${book.bookTitle}.epub`,
+        book.fileName ?? `${displayTitle}.epub`,
         book.fileUrl
       );
       if (file) {
         onOpenFile(file);
       } else {
-        setError(`Could not load "${book.bookTitle}". The file is not cached locally and no cloud copy is available. Please re-upload the EPUB.`);
+        setError(`Could not load "${displayTitle}". The file is not cached locally and no cloud copy is available. Please re-upload the EPUB.`);
       }
     } catch {
-      setError(`Failed to open "${book.bookTitle}". Please re-upload the EPUB file.`);
+      setError(`Failed to open "${displayTitle}". Please re-upload the EPUB file.`);
     } finally {
       setOpeningBookId(null);
     }
@@ -168,7 +175,7 @@ export function BookshelfPanel({ onOpenFile }: BookshelfPanelProps) {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-[#c8c4be] truncate">{book.bookTitle}</p>
+                    <p className="text-xs font-medium text-[#c8c4be] truncate">{getDisplayTitle(book)}</p>
                     <div className="flex items-center gap-1 mt-0.5">
                       <Clock size={9} className="text-[#4e4c49]" />
                       <p className="text-[10px] text-[#4e4c49]">{formatDate(book.lastOpenedAt)}</p>

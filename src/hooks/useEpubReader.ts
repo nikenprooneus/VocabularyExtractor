@@ -145,8 +145,14 @@ export function useEpubReader() {
         bookAuthor: detail.author || s.bookAuthor,
         toc: mapToc(detail.toc),
       }));
+      if ((detail.title || detail.author) && currentBookIdRef.current && user) {
+        const metaFields: Parameters<typeof upsertReadingProgress>[2] = {};
+        if (detail.title) metaFields.bookTitle = detail.title;
+        if (detail.author) metaFields.bookAuthor = detail.author;
+        upsertReadingProgress(user.id, currentBookIdRef.current, metaFields).catch(() => {});
+      }
     },
-    []
+    [user]
   );
 
   const onViewReady = useCallback(async () => {
@@ -295,15 +301,14 @@ export function useEpubReader() {
         const bookTitle = file.name.replace(/\.epub$/i, '');
 
         try {
-          await upsertReadingProgress(user.id, bookId, {
-            bookTitle,
-            bookAuthor: null,
-            coverUrl: null,
-            fileUrl: resolvedFileUrl,
+          const progressFields: Parameters<typeof upsertReadingProgress>[2] = {
             fileName: file.name,
             cfi: savedCfi,
             percentage: savedPercentage || null,
-          });
+          };
+          if (bookTitle) progressFields.bookTitle = bookTitle;
+          if (resolvedFileUrl) progressFields.fileUrl = resolvedFileUrl;
+          await upsertReadingProgress(user.id, bookId, progressFields);
         } catch {
           // non-fatal
         }
