@@ -85,15 +85,22 @@ function SortableFieldItem({ field, onRemove, isProtectedField = false }: Sortab
             <code className="text-[11px] bg-background border border-border text-muted-foreground px-1.5 py-0.5 rounded font-mono">
               {markerTag}
             </code>
-            {!isProtectedField && (
-              <button
-                onClick={() => onRemove(field.id)}
-                className="text-destructive hover:opacity-80 transition-opacity"
-                aria-label={`Remove ${field.name}`}
-              >
-                <Trash2 size={16} />
-              </button>
-            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isProtectedField) onRemove(field.id);
+              }}
+              disabled={isProtectedField}
+              className={`p-1 transition-colors ${
+                isProtectedField
+                  ? 'invisible'
+                  : 'text-muted-foreground hover:text-red-400 cursor-pointer'
+              }`}
+              aria-label={`Delete ${field.name}`}
+              title={isProtectedField ? '' : 'Delete field'}
+            >
+              <Trash2 size={14} />
+            </button>
           </div>
         </div>
       </div>
