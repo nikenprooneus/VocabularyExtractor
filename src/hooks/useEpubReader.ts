@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import type { Rendition } from 'epubjs';
+import { EpubCFI } from 'epubjs';
 import { useAuth } from '../contexts/AuthContext';
 import {
   fetchReadingProgressByBookId,
@@ -152,26 +153,6 @@ export function useEpubReader() {
       });
       rendition.themes.select('dark-taupe');
 
-      rendition.on('selected', (cfiRange: string, contents: any) => {
-        try {
-          const windowObj = contents?.window ?? contents?.document?.defaultView;
-          const sel = windowObj?.getSelection();
-          const text = sel?.toString().trim() || '';
-          if (!text) return;
-          const range = sel?.rangeCount ? sel.getRangeAt(0) : null;
-          const contextText = range?.commonAncestorContainer?.textContent?.trim() || text;
-          setPendingSelection({
-            cfi: cfiRange,
-            text,
-            contextText,
-            rect: { top: 0, left: 0, width: 0, height: 0, bottom: 0, right: 0 },
-          });
-          setActiveAnnotation(null);
-        } catch {
-          // non-fatal
-        }
-      });
-
       rendition.hooks.content.register((contents: any) => {
         try {
           const style = contents.document.createElement('style');
@@ -213,6 +194,62 @@ export function useEpubReader() {
             if (!contents.document.hasFocus()) {
               contents.window.focus();
             }
+          }, { passive: true });
+        } catch {
+          // non-fatal
+        }
+
+        try {
+          let currentSelectionCache: { text: string; range: Range; contextText: string } | null = null;
+          let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+          contents.document.addEventListener('selectionchange', () => {
+            try {
+              const sel = contents.window.getSelection();
+              if (!sel || sel.rangeCount === 0) return;
+
+              const text = sel.toString().trim();
+
+              if (text) {
+                const range = sel.getRangeAt(0).cloneRange();
+                const contextText = range.commonAncestorContainer?.textContent?.trim() || text;
+
+                currentSelectionCache = { text, range, contextText };
+
+                if (debounceTimer) clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                  if (currentSelectionCache && contents.cfiBase) {
+                    try {
+                      const cfi = new EpubCFI(currentSelectionCache.range, contents.cfiBase).toString();
+                      setPendingSelection({
+                        cfi,
+                        text: currentSelectionCache.text,
+                        contextText: currentSelectionCache.contextText,
+                        rect: { top: 0, left: 0, width: 0, height: 0, bottom: 0, right: 0 },
+                      });
+                      setActiveAnnotation(null);
+                    } catch (err) {
+                      console.error('CFI generation failed:', err);
+                    }
+                  }
+                }, 500);
+              }
+            } catch {
+              // non-fatal
+            }
+          });
+
+          contents.document.addEventListener('touchend', () => {
+            setTimeout(() => {
+              try {
+                const sel = contents.window.getSelection();
+                if (!sel || sel.isCollapsed) {
+                  currentSelectionCache = null;
+                }
+              } catch {
+                // non-fatal
+              }
+            }, 100);
           }, { passive: true });
         } catch {
           // non-fatal
