@@ -138,7 +138,7 @@ export const FoliateView = forwardRef<FoliateViewHandle, FoliateViewProps>(
       if (container) {
         const h = container.getBoundingClientRect().height;
         if (h > 0) {
-          renderer.setAttribute('max-block-size', String(Math.floor(h - 20)));
+          renderer.setAttribute('max-block-size', `${Math.floor(h - 20)}px`);
         }
       }
     };
@@ -152,7 +152,7 @@ export const FoliateView = forwardRef<FoliateViewHandle, FoliateViewProps>(
         renderer?: HTMLElement & { setAttribute: (k: string, v: string) => void };
       };
       if (view?.renderer) {
-        view.renderer.setAttribute('max-block-size', String(Math.floor(h - 20)));
+        view.renderer.setAttribute('max-block-size', `${Math.floor(h - 20)}px`);
       }
     };
 
