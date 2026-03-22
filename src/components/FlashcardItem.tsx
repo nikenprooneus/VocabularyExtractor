@@ -26,13 +26,13 @@ export function FlashcardItem({ config, results, outputFields }: FlashcardItemPr
   return (
     <div
       onClick={() => setIsExpanded(!isExpanded)}
-      className={`rounded-xl border-2 bg-card cursor-pointer transition-all duration-300 h-auto min-h-[140px] overflow-hidden ${
+      className={`rounded-xl border-2 bg-card cursor-pointer transition-all duration-300 h-full overflow-hidden ${
         isExpanded
           ? 'border-primary shadow-lg'
           : 'border-border hover:border-border/80 hover:shadow-lg hover:scale-102 hover:bg-accent'
       }`}
     >
-      <div className="p-5 flex flex-col gap-2">
+      <div className="p-5 flex flex-col gap-2 flex-1">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
             <p className="text-sm font-semibold text-primary uppercase tracking-wide mb-2">

@@ -3,7 +3,7 @@ import { Copy } from 'lucide-react';
 import { Settings as SettingsType, GeneratedResult, ParsedMeaning, ConceptTreeNode } from '../../types/index';
 import { FlashcardItem } from '../FlashcardItem';
 import { ConceptTreesSection } from '../concepttree/ConceptTreesSection';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,7 @@ export function ResultsDisplay({
   onConceptSelectionChange,
 }: ResultsDisplayProps) {
   const hasBothOutputs = !!(results.rawOutput && conceptTreeRawOutput);
+  const [showFullAnalysis, setShowFullAnalysis] = useState(false);
 
   return (
     <>
@@ -97,28 +98,38 @@ export function ResultsDisplay({
 
       {hasBothOutputs ? (
         <Card>
-          <CardHeader className="pb-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Full AI Analysis</p>
-          </CardHeader>
-          <CardContent className="pt-0 space-y-3">
-            <Tabs defaultValue="tmrnd">
-              <TabsList className="w-full">
-                <TabsTrigger value="tmrnd" className="flex-1">TMRND Analysis</TabsTrigger>
-                <TabsTrigger value="concept" className="flex-1">Concept Tree Analysis</TabsTrigger>
-              </TabsList>
-              <TabsContent value="tmrnd">
-                <RawOutputPanel
-                  rawOutput={results.rawOutput!}
-                  onCopy={() => navigator.clipboard.writeText(results.rawOutput!)}
-                />
-              </TabsContent>
-              <TabsContent value="concept">
-                <RawOutputPanel
-                  rawOutput={conceptTreeRawOutput!}
-                  onCopy={() => navigator.clipboard.writeText(conceptTreeRawOutput!)}
-                />
-              </TabsContent>
-            </Tabs>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Full AI Analysis</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFullAnalysis(v => !v)}
+                className="text-muted-foreground h-7 px-2 text-xs"
+              >
+                {showFullAnalysis ? 'Hide' : 'Show'}
+              </Button>
+            </div>
+            {showFullAnalysis && (
+              <Tabs defaultValue="tmrnd">
+                <TabsList className="w-full">
+                  <TabsTrigger value="tmrnd" className="flex-1">TMRND Analysis</TabsTrigger>
+                  <TabsTrigger value="concept" className="flex-1">Concept Tree Analysis</TabsTrigger>
+                </TabsList>
+                <TabsContent value="tmrnd">
+                  <RawOutputPanel
+                    rawOutput={results.rawOutput!}
+                    onCopy={() => navigator.clipboard.writeText(results.rawOutput!)}
+                  />
+                </TabsContent>
+                <TabsContent value="concept">
+                  <RawOutputPanel
+                    rawOutput={conceptTreeRawOutput!}
+                    onCopy={() => navigator.clipboard.writeText(conceptTreeRawOutput!)}
+                  />
+                </TabsContent>
+              </Tabs>
+            )}
           </CardContent>
         </Card>
       ) : results.rawOutput ? (

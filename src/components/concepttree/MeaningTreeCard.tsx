@@ -98,35 +98,40 @@ export function MeaningTreeCard({ meaning, word, onSelectionChange }: MeaningTre
       </div>
 
       {hasAnyNodes ? (
-        <div className="flex flex-wrap items-center gap-1.5 mb-4">
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2 mb-4">
           {nodes.map((node, idx) => (
-            <div key={node.name} className="flex items-center gap-1.5">
+            <>
               <ConceptNode
+                key={node.name}
                 name={node.name}
                 status={node.status}
                 tier={node.tier}
                 isSelected={selectedNames.has(node.name)}
                 onToggle={() => handleToggle(node.name)}
               />
-              <span className="text-border text-sm font-light select-none">›</span>
+              {idx < nodes.length - 1 && (
+                <span key={`arrow-${idx}`} className="text-border text-sm font-light select-none">›</span>
+              )}
               {idx === nodes.length - 1 && (
                 <>
+                  <span key={`arrow-last`} className="text-border text-sm font-light select-none">›</span>
                   {conceptLink ? (
-                    <span className="text-xs italic text-muted-foreground bg-secondary border border-border px-2 py-0.5 rounded-full select-none">
+                    <span key="concept-link" className="text-xs italic text-muted-foreground bg-secondary border border-border px-2 py-0.5 rounded-full select-none">
                       {conceptLink}
                     </span>
                   ) : (
-                    <span className="text-xs text-muted-foreground font-mono px-1 select-none">···</span>
+                    <span key="concept-dots" className="text-xs text-muted-foreground font-mono px-1 select-none">···</span>
                   )}
-                  <span className="text-border text-sm font-light select-none">›</span>
+                  <span key="arrow-word" className="text-border text-sm font-light select-none">›</span>
                   <ConceptNode
+                    key="word-node"
                     name={word}
                     status={wordAlreadyExists ? 'EXISTING' : 'NEW'}
                     tier="word"
                   />
                 </>
               )}
-            </div>
+            </>
           ))}
           {nodes.length === 0 && (
             <ConceptNode name={word} status={wordAlreadyExists ? 'EXISTING' : 'NEW'} tier="word" />
