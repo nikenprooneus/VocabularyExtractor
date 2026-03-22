@@ -58,14 +58,16 @@
 }
 
 /* iOS WebKit iframe text selection bug fix */
-.epub-view {
+.epub-container,
+.epub-view,
+.epub-view iframe {
   overflow: visible !important;
+  -webkit-user-select: text !important;
+  user-select: text !important;
 }
 
 .epub-view iframe {
   pointer-events: auto !important;
-  -webkit-user-select: text !important;
-  user-select: text !important;
 }
 
 @layer components {

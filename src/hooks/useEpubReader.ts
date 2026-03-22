@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import type { Rendition } from 'epubjs';
-import { EpubCFI } from 'epubjs';
 import { useAuth } from '../contexts/AuthContext';
 import {
   fetchReadingProgressByBookId,
@@ -60,8 +59,14 @@ export function useEpubReader() {
   const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
   const [activeAnnotation, setActiveAnnotation] = useState<{ annotation: Annotation } | null>(null);
   const [readMode, setReadMode] = useState<ReadMode>(() => {
-    const isTouch = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
-    return isTouch ? 'scrolled' : 'paginated';
+    if (typeof window !== 'undefined') {
+      const isTouch =
+        ('ontouchstart' in window) ||
+        (navigator.maxTouchPoints > 0) ||
+        ((navigator as any).msMaxTouchPoints > 0);
+      return isTouch ? 'scrolled' : 'paginated';
+    }
+    return 'paginated';
   });
   const [fontSize, setFontSize] = useState<number>(100);
   const [fontFamily, setFontFamily] = useState<string>('System Default');
@@ -147,11 +152,13 @@ export function useEpubReader() {
       });
       rendition.themes.select('dark-taupe');
 
-      rendition.on('selected', (cfiRange: string) => {
+      rendition.on('selected', (cfiRange: string, contents: any) => {
         try {
-          const range = rendition.getRange(cfiRange);
-          const text = range?.toString().trim() ?? '';
+          const windowObj = contents?.window ?? contents?.document?.defaultView;
+          const sel = windowObj?.getSelection();
+          const text = sel?.toString().trim() || '';
           if (!text) return;
+          const range = sel?.rangeCount ? sel.getRangeAt(0) : null;
           const contextText = range?.commonAncestorContainer?.textContent?.trim() || text;
           setPendingSelection({
             cfi: cfiRange,
@@ -211,99 +218,6 @@ export function useEpubReader() {
           // non-fatal
         }
 
-        const buildCfi = (range: Range): string => {
-          try {
-            if (contents.cfiBase) {
-              const cfi = new EpubCFI(range, contents.cfiBase).toString();
-              toast.success('CFI Math Success!', { id: 'cfi-success' });
-              return cfi;
-            } else {
-              toast.error('Missing cfiBase', { id: 'cfi-error-base' });
-            }
-          } catch (err: any) {
-            toast.error('CFI Error: ' + (err.message || 'Unknown'), { id: 'cfi-error' });
-          }
-          return '';
-        };
-
-        const snapshotSelection = (): { text: string; contextText: string; range: Range } | null => {
-          try {
-            const sel = contents.window.getSelection();
-            if (!sel || sel.rangeCount === 0) return null;
-            const text = sel.toString().trim();
-            if (!text) return null;
-            toast('Mobile Sel: ' + text.substring(0, 10) + '...', { id: 'sel-text' });
-            const range = sel.getRangeAt(0).cloneRange();
-            const contextText = range.commonAncestorContainer?.textContent?.trim() || text;
-            return { text, contextText, range };
-          } catch {
-            return null;
-          }
-        };
-
-        const commitSnapshot = (snapshot: { text: string; contextText: string; range: Range }) => {
-          const cfi = buildCfi(snapshot.range);
-          if (!cfi) {
-            toast.error('Commit failed: Empty CFI', { id: 'commit-fail' });
-            return;
-          }
-          toast.success('State Set! Popover should appear', { id: 'state-set' });
-          setPendingSelection(prev => {
-            if (prev && prev.text === snapshot.text) return prev;
-            return {
-              cfi,
-              text: snapshot.text,
-              contextText: snapshot.contextText,
-              rect: { top: 0, left: 0, width: 0, height: 0, bottom: 0, right: 0 },
-            };
-          });
-          setActiveAnnotation(null);
-        };
-
-        let pendingSnapshot: { text: string; contextText: string; range: Range } | null = null;
-        let commitTimer: ReturnType<typeof setTimeout> | null = null;
-
-        const scheduleCommit = (snapshot: { text: string; contextText: string; range: Range }) => {
-          pendingSnapshot = snapshot;
-          if (commitTimer) clearTimeout(commitTimer);
-          commitTimer = setTimeout(() => {
-            if (pendingSnapshot) commitSnapshot(pendingSnapshot);
-            pendingSnapshot = null;
-          }, 80);
-        };
-
-        contents.document.addEventListener('selectionchange', () => {
-          const snapshot = snapshotSelection();
-          if (!snapshot) return;
-          scheduleCommit(snapshot);
-        });
-
-        contents.document.addEventListener('touchend', () => {
-          const snapshot = snapshotSelection();
-          if (snapshot) {
-            if (commitTimer) clearTimeout(commitTimer);
-            pendingSnapshot = snapshot;
-            commitTimer = setTimeout(() => {
-              if (pendingSnapshot) commitSnapshot(pendingSnapshot);
-              pendingSnapshot = null;
-            }, 300);
-          } else if (pendingSnapshot) {
-            const snap = pendingSnapshot;
-            if (commitTimer) clearTimeout(commitTimer);
-            commitTimer = setTimeout(() => {
-              commitSnapshot(snap);
-              pendingSnapshot = null;
-            }, 300);
-          }
-        }, { passive: true });
-
-        contents.document.addEventListener('mouseup', () => {
-          const snapshot = snapshotSelection();
-          if (!snapshot) return;
-          if (commitTimer) clearTimeout(commitTimer);
-          commitSnapshot(snapshot);
-          pendingSnapshot = null;
-        });
       });
 
       rendition.on('relocated', (loc: { start: { percentage: number } }) => {
