@@ -57,6 +57,17 @@
   }
 }
 
+/* iOS WebKit iframe text selection bug fix */
+.epub-view {
+  overflow: visible !important;
+}
+
+.epub-view iframe {
+  pointer-events: auto !important;
+  -webkit-user-select: text !important;
+  user-select: text !important;
+}
+
 @layer components {
   .btn-primary {
     @apply bg-primary hover:opacity-90 text-primary-foreground py-2 px-4 rounded-lg font-medium transition;

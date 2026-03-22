@@ -11,6 +11,7 @@ const darkTaupeReaderStyles: IReactReaderStyle = {
   ...ReactReaderStyle,
   container: {
     ...ReactReaderStyle.container,
+    overflow: 'visible',
     background: '#1c1a18',
   },
   readerArea: {
