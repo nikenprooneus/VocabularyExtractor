@@ -64,20 +64,16 @@ function SortableFieldItem({ field, onRemove, isProtectedField = false }: Sortab
         >
           <GripVertical size={20} />
         </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-foreground font-medium block">{field.name}</span>
+        <div className="flex-1 flex items-center justify-between min-w-0">
+          <div className="flex items-center gap-2 truncate">
+            <span className="text-foreground font-medium truncate">{field.name}</span>
             {isProtectedField && (
-              <>
-                <Lock size={14} className="text-muted-foreground" />
-                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded font-medium border border-primary/20">Required</span>
-              </>
+              <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium border border-primary/20 flex-shrink-0 flex items-center gap-1">
+                <Lock size={10} /> Required
+              </span>
             )}
           </div>
-          <div className="flex items-center gap-2 mt-1">
-            <code className="text-xs bg-background border border-border text-muted-foreground px-2 py-1 rounded font-mono">
-              {markerTag}
-            </code>
+          <div className="flex items-center gap-3 flex-shrink-0 ml-4">
             <button
               onClick={handleCopyTag}
               className="text-muted-foreground hover:text-foreground transition-colors"
@@ -86,17 +82,20 @@ function SortableFieldItem({ field, onRemove, isProtectedField = false }: Sortab
             >
               <Copy size={14} />
             </button>
+            <code className="text-[11px] bg-background border border-border text-muted-foreground px-1.5 py-0.5 rounded font-mono">
+              {markerTag}
+            </code>
+            {!isProtectedField && (
+              <button
+                onClick={() => onRemove(field.id)}
+                className="text-destructive hover:opacity-80 transition-opacity"
+                aria-label={`Remove ${field.name}`}
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
           </div>
         </div>
-        {!isProtectedField && (
-          <button
-            onClick={() => onRemove(field.id)}
-            className="text-destructive hover:opacity-80 transition-opacity"
-            aria-label={`Remove ${field.name}`}
-          >
-            <Trash2 size={18} />
-          </button>
-        )}
       </div>
     </div>
   );
@@ -189,20 +188,6 @@ export function OutputFieldsSection({
         <div className="text-xs text-muted-foreground bg-primary/5 border border-primary/20 p-4 rounded-lg space-y-2">
           <p className="font-semibold text-foreground">Use Marker Tags in your prompt:</p>
           <p>Each field has a marker tag displayed below its name. Copy these tags and use them in your prompt template to extract specific values from the AI's response.</p>
-          <p className="font-semibold text-foreground">Concept Tree fields:</p>
-          <p>
-            Add fields named{' '}
-            <code className="bg-background border border-border px-1 rounded font-mono text-foreground">Tier1</code>,{' '}
-            <code className="bg-background border border-border px-1 rounded font-mono text-foreground">Tier2</code>,{' '}
-            <code className="bg-background border border-border px-1 rounded font-mono text-foreground">Tier3</code>, and{' '}
-            <code className="bg-background border border-border px-1 rounded font-mono text-foreground">Context Definition</code>{' '}
-            to enable the Concept Tree visualization.{' '}
-            <code className="bg-background border border-border px-1 rounded font-mono text-foreground">ConceptLink</code>{' '}
-            is a required field that labels the relationship between Tier 3 and the word. For polysemic words, use numbered tags in your prompt (e.g.{' '}
-            <code className="bg-background border border-border px-1 rounded font-mono text-foreground">&Tier1 1&{'{}'}</code>,{' '}
-            <code className="bg-background border border-border px-1 rounded font-mono text-foreground">&Tier1 2&{'{}'}</code>) alongside{' '}
-            <code className="bg-background border border-border px-1 rounded font-mono text-foreground">&No of Definition&{'{}'}</code>.
-          </p>
         </div>
       </div>
     </div>

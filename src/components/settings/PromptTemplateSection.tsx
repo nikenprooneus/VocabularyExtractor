@@ -1,3 +1,5 @@
+import { useRef } from 'react';
+import { Maximize2 } from 'lucide-react';
 import { Label } from '../ui/label';
 
 interface PromptTemplateSectionProps {
@@ -11,6 +13,15 @@ export function PromptTemplateSection({
   onPromptTemplateChange,
   mode = 'tmrnd',
 }: PromptTemplateSectionProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleAutoExpand = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight + 2}px`;
+    }
+  };
+
   return (
     <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
       <div className="px-6 py-4 border-b border-border">
@@ -23,8 +34,18 @@ export function PromptTemplateSection({
       </div>
       <div className="p-6 space-y-4">
         <div>
-          <Label htmlFor="prompt-template" className="mb-1.5">Template</Label>
+          <div className="flex items-center justify-between mb-1.5">
+            <Label htmlFor="prompt-template">Template</Label>
+            <button
+              onClick={handleAutoExpand}
+              className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+              title="Fit height to content"
+            >
+              <Maximize2 size={12} /> Auto-expand
+            </button>
+          </div>
           <textarea
+            ref={textareaRef}
             id="prompt-template"
             value={promptTemplate}
             onChange={(e) => onPromptTemplateChange(e.target.value)}
