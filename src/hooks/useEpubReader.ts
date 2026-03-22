@@ -26,6 +26,7 @@ const initialState: ReaderState = {
   bookAuthor: '',
   coverUrl: null,
   currentCfi: null,
+  currentTocItem: null,
   percentage: 0,
   toc: [],
   isLoaded: false,
@@ -92,7 +93,7 @@ export function useEpubReader() {
   );
 
   const onRelocate = useCallback(
-    (detail: { cfi: string | null; fraction: number }) => {
+    (detail: { cfi: string | null; fraction: number; tocItem?: { label: string; href: string } | null }) => {
       const cfi = detail.cfi;
       const pct = Math.round(detail.fraction * 100) / 100;
       if (cfi) {
@@ -100,7 +101,11 @@ export function useEpubReader() {
         setState(s => ({ ...s, currentCfi: cfi }));
       }
       currentPercentageRef.current = pct;
-      setState(s => ({ ...s, percentage: pct }));
+      setState(s => ({
+        ...s,
+        percentage: pct,
+        currentTocItem: detail.tocItem !== undefined ? (detail.tocItem ?? null) : s.currentTocItem,
+      }));
       if (currentBookIdRef.current) {
         scheduleSave(currentBookIdRef.current, cfi ?? currentCfiRef.current, pct);
       }

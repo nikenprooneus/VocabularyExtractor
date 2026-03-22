@@ -415,6 +415,7 @@ export interface ReaderState {
   bookAuthor: string;
   coverUrl: string | null;
   currentCfi: string | null;
+  currentTocItem: { label: string; href: string } | null;
   percentage: number;
   toc: EpubTocItem[];
   isLoaded: boolean;

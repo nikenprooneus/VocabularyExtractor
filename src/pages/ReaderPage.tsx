@@ -106,6 +106,7 @@ export default function ReaderPage() {
             items={state.toc}
             onNavigate={(href) => { goToTocItem(href); setIsTocOpen(false); }}
             onClose={() => setIsTocOpen(false)}
+            currentHref={state.currentTocItem?.href ?? null}
           />
         )}
 
