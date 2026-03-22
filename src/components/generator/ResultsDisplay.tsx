@@ -33,13 +33,20 @@ export function ResultsDisplay({
 
   return (
     <>
-      {results['Definition'] && (
+      {(results['Definition'] || results['Other Definition']) && (
         <Card>
           <CardContent className="pt-6">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Definition</p>
-            <p className="text-base sm:text-lg leading-relaxed text-foreground font-normal">
-              {results['Definition']}
-            </p>
+            {results['Definition'] && (
+              <p className="text-base sm:text-lg leading-relaxed text-foreground font-normal">
+                {results['Definition']}
+              </p>
+            )}
+            {results['Other Definition'] && (
+              <p className={`text-base sm:text-lg leading-relaxed text-muted-foreground font-light italic${results['Definition'] ? ' mt-3' : ''}`}>
+                {results['Other Definition']}
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
@@ -69,7 +76,7 @@ export function ResultsDisplay({
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Extracted Fields</p>
             <div className="space-y-4 max-h-96 overflow-y-auto">
               {settings.outputFields
-                .filter(field => field.name !== 'Definition')
+                .filter(field => field.name !== 'Definition' && field.name !== 'Other Definition')
                 .map((field) => (
                   <div key={field.id}>
                     <label className="block text-xs font-medium text-muted-foreground mb-1.5">
