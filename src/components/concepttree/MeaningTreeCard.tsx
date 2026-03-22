@@ -79,18 +79,18 @@ export function MeaningTreeCard({ meaning, word, onSelectionChange }: MeaningTre
   const hasAnyNodes = nodes.length > 0;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-card border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <BookOpen size={15} className="text-gray-400" />
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          <BookOpen size={15} className="text-muted-foreground" />
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Meaning
           </span>
         </div>
         {hasAnythingNew && (
           <div className="flex items-center gap-1.5">
-            <span className="inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+            <span className="inline-flex items-center gap-1 text-xs text-emerald-400 bg-emerald-950/40 border border-emerald-700/50 px-2 py-0.5 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
               {newCount} new
             </span>
           </div>
@@ -108,17 +108,17 @@ export function MeaningTreeCard({ meaning, word, onSelectionChange }: MeaningTre
                 isSelected={selectedNames.has(node.name)}
                 onToggle={() => handleToggle(node.name)}
               />
-              <span className="text-gray-300 text-sm font-light select-none">›</span>
+              <span className="text-border text-sm font-light select-none">›</span>
               {idx === nodes.length - 1 && (
                 <>
                   {conceptLink ? (
-                    <span className="text-xs italic text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full select-none">
+                    <span className="text-xs italic text-muted-foreground bg-secondary border border-border px-2 py-0.5 rounded-full select-none">
                       {conceptLink}
                     </span>
                   ) : (
-                    <span className="text-xs text-gray-400 font-mono px-1 select-none">···</span>
+                    <span className="text-xs text-muted-foreground font-mono px-1 select-none">···</span>
                   )}
-                  <span className="text-gray-300 text-sm font-light select-none">›</span>
+                  <span className="text-border text-sm font-light select-none">›</span>
                   <ConceptNode
                     name={word}
                     status={wordAlreadyExists ? 'EXISTING' : 'NEW'}
@@ -139,18 +139,18 @@ export function MeaningTreeCard({ meaning, word, onSelectionChange }: MeaningTre
       )}
 
       {contextDefinition && (
-        <p className="text-sm text-gray-600 leading-relaxed mb-4 pl-1 border-l-2 border-gray-200">
+        <p className="text-sm text-muted-foreground leading-relaxed mb-4 pl-1 border-l-2 border-border">
           {contextDefinition}
         </p>
       )}
 
-      <div className="flex items-center pt-3 border-t border-gray-100">
-        <div className="flex gap-3 text-xs text-gray-400">
+      <div className="flex items-center pt-3 border-t border-border">
+        <div className="flex gap-3 text-xs text-muted-foreground">
           {existingCount > 0 && (
             <span>{existingCount} existing</span>
           )}
           {newCount > 0 && (
-            <span className="text-emerald-600">{newCount} new</span>
+            <span className="text-emerald-400">{newCount} new</span>
           )}
           {!hasAnythingNew && (
             <span className="italic">All concepts exist</span>

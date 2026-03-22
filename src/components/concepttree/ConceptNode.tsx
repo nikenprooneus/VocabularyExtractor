@@ -9,17 +9,17 @@ interface ConceptNodeProps {
 }
 
 const tierStyles: Record<string | number, string> = {
-  1: 'bg-slate-100 border-slate-300 text-slate-700',
-  2: 'bg-slate-50 border-slate-200 text-slate-600',
-  3: 'bg-gray-50 border-gray-200 text-gray-600',
-  word: 'bg-blue-50 border-blue-300 text-blue-800 font-semibold',
+  1: 'bg-secondary border-border text-foreground/80',
+  2: 'bg-secondary/70 border-border text-foreground/70',
+  3: 'bg-secondary/50 border-border text-foreground/60',
+  word: 'bg-primary/10 border-primary/40 text-primary font-semibold',
 };
 
 const newStyles: Record<string | number, string> = {
-  1: 'bg-emerald-100 border-emerald-400 text-emerald-800',
-  2: 'bg-emerald-50 border-emerald-300 text-emerald-700',
-  3: 'bg-green-50 border-green-200 text-green-700',
-  word: 'bg-blue-50 border-blue-300 text-blue-800 font-semibold',
+  1: 'bg-emerald-950/40 border-emerald-700 text-emerald-400',
+  2: 'bg-emerald-950/30 border-emerald-700/70 text-emerald-400',
+  3: 'bg-emerald-950/20 border-emerald-800/60 text-emerald-500',
+  word: 'bg-primary/10 border-primary/40 text-primary font-semibold',
 };
 
 export function ConceptNode({ name, status, isSelected, onToggle, tier }: ConceptNodeProps) {
@@ -33,11 +33,11 @@ export function ConceptNode({ name, status, isSelected, onToggle, tier }: Concep
           type="checkbox"
           checked={isSelected ?? false}
           onChange={onToggle}
-          className="w-3.5 h-3.5 rounded border-emerald-400 text-emerald-600 cursor-pointer flex-shrink-0 accent-emerald-600"
+          className="w-3.5 h-3.5 rounded border-emerald-600 text-emerald-500 cursor-pointer flex-shrink-0 accent-emerald-500"
         />
       )}
       <span
-        className={`inline-flex items-center px-2.5 py-1 rounded-full border text-sm whitespace-nowrap ${baseStyle} ${isNew ? 'ring-1 ring-emerald-300/50' : ''}`}
+        className={`inline-flex items-center px-2.5 py-1 rounded-full border text-sm whitespace-nowrap ${baseStyle} ${isNew ? 'ring-1 ring-emerald-700/50' : ''}`}
       >
         {name}
       </span>

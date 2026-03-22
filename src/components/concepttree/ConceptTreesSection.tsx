@@ -14,15 +14,15 @@ export function ConceptTreesSection({ meaning, word, onSelectionChange }: Concep
   if (!hasTierData) return null;
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 sm:p-6">
+    <div className="bg-card border border-border rounded-xl shadow-sm p-4 sm:p-6">
       <div className="flex items-center gap-2 mb-5">
-        <GitBranch size={16} className="text-slate-400" />
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Concept Tree</p>
+        <GitBranch size={16} className="text-muted-foreground" />
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Concept Tree</p>
       </div>
 
-      <div className="mb-4 text-xs text-slate-500 bg-slate-50 rounded-lg p-3 border border-slate-100">
+      <div className="mb-4 text-xs text-muted-foreground bg-secondary rounded-lg p-3 border border-border">
         <span className="inline-flex items-center gap-1.5 mr-3">
-          <span className="w-2 h-2 rounded-full bg-slate-300 inline-block" />
+          <span className="w-2 h-2 rounded-full bg-muted-foreground/50 inline-block" />
           Existing concept
         </span>
         <span className="inline-flex items-center gap-1.5">
