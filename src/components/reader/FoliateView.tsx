@@ -245,7 +245,6 @@ export const FoliateView = forwardRef<FoliateViewHandle, FoliateViewProps>(
         if (view.renderer) {
           applyRendererStyle(view.renderer);
         }
-        isOpenRef.current = true;
       },
       close() {
         const view = viewRef.current as unknown as { close?: () => void };
