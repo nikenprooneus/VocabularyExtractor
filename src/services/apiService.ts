@@ -1,5 +1,5 @@
 import { APIConfig, GeneratedResult, OutputField } from '../types/index';
-import { ApiJsonSchema } from '../utils/schemaBuilder';
+import { ApiJsonSchema, sanitizeSchemaForGemini } from '../utils/schemaBuilder';
 
 async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 60000): Promise<Response> {
   const controller = new AbortController();
@@ -157,7 +157,7 @@ async function callGemini(
 
   if (jsonSchema && useSchema) {
     generationConfig.responseMimeType = 'application/json';
-    generationConfig.responseSchema = jsonSchema;
+    generationConfig.responseSchema = sanitizeSchemaForGemini(jsonSchema);
   }
 
   const response = await fetchWithTimeout(url, {

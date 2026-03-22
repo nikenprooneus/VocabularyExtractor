@@ -8,6 +8,17 @@ export interface ApiJsonSchema {
   additionalProperties: false;
 }
 
+export interface GeminiJsonSchema {
+  type: 'object';
+  properties: Record<string, { type: string; description?: string }>;
+  required: string[];
+}
+
+export function sanitizeSchemaForGemini(schema: ApiJsonSchema): GeminiJsonSchema {
+  const { additionalProperties: _, ...rest } = schema;
+  return rest;
+}
+
 export function buildApiJsonSchema(outputFields: OutputField[]): ApiJsonSchema {
   const properties: Record<string, { type: string; description?: string }> = {};
   const required: string[] = [];
