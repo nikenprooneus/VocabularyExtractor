@@ -132,8 +132,8 @@ export const FoliateView = forwardRef<FoliateViewHandle, FoliateViewProps>(
     const applyRendererStyle = (renderer: HTMLElement) => {
       renderer.setAttribute('flow', pendingFlowRef.current);
       renderer.setAttribute('gap', '5%');
-      renderer.setAttribute('max-inline-size', '720');
-      renderer.setAttribute('margin', '10');
+      renderer.setAttribute('max-inline-size', '720px');
+      renderer.setAttribute('margin', '10px');
       const container = containerRef.current;
       if (container) {
         const h = container.getBoundingClientRect().height;
