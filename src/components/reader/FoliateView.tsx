@@ -48,6 +48,7 @@ interface FoliateViewProps {
   onSelection?: (detail: { cfi: string; text: string; contextText: string }) => void;
   onAnnotationClick?: (value: string) => void;
   onBookReady?: (detail: { title: string; author: string; toc: FoliaTocItem[] }) => void;
+  onReady?: () => void;
   annotations?: Array<{ id: string; cfi: string; color: AnnotationColor }>;
   flow?: 'paginated' | 'scrolled';
   fontSize?: number;
@@ -116,7 +117,7 @@ function extractToc(items: unknown[]): FoliaTocItem[] {
 
 export const FoliateView = forwardRef<FoliateViewHandle, FoliateViewProps>(
   function FoliateView(
-    { onRelocate, onLoad, onSelection, onAnnotationClick, onBookReady,
+    { onRelocate, onLoad, onSelection, onAnnotationClick, onBookReady, onReady,
       flow = 'paginated', fontSize = 100, fontFamily = 'System Default' },
     ref
   ) {
@@ -216,10 +217,14 @@ export const FoliateView = forwardRef<FoliateViewHandle, FoliateViewProps>(
       async open(file: File) {
         const view = viewRef.current as unknown as {
           open?: (file: File) => Promise<void>;
+          renderer?: HTMLElement & { setAttribute: (k: string, v: string) => void };
         };
         if (!view?.open) return;
         isOpenRef.current = false;
         await view.open(file);
+        if (view.renderer) {
+          applyRendererStyle(view.renderer);
+        }
         isOpenRef.current = true;
       },
       close() {
@@ -405,9 +410,8 @@ export const FoliateView = forwardRef<FoliateViewHandle, FoliateViewProps>(
         container.appendChild(viewEl);
         viewRef.current = viewEl;
 
-        const rendererEl = (viewEl as unknown as { renderer?: HTMLElement }).renderer;
-        if (rendererEl) {
-          applyRendererStyle(rendererEl);
+        if (mounted) {
+          onReady?.();
         }
       };
 

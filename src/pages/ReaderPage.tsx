@@ -33,6 +33,7 @@ export default function ReaderPage() {
     onAnnotationClick,
     onBookReady,
     onLoad,
+    onViewReady,
     readMode,
     setReadMode,
     fontSize,
@@ -99,17 +100,17 @@ export default function ReaderPage() {
         onChange={handleFileChange}
       />
 
-      {state.isLoaded ? (
-        <div className="flex-1 flex overflow-hidden">
-          {isTocOpen && state.toc.length > 0 && (
-            <TocPanel
-              items={state.toc}
-              onNavigate={(href) => { goToTocItem(href); setIsTocOpen(false); }}
-              onClose={() => setIsTocOpen(false)}
-            />
-          )}
+      <div className="flex-1 flex overflow-hidden relative">
+        {state.isLoaded && isTocOpen && state.toc.length > 0 && (
+          <TocPanel
+            items={state.toc}
+            onNavigate={(href) => { goToTocItem(href); setIsTocOpen(false); }}
+            onClose={() => setIsTocOpen(false)}
+          />
+        )}
 
-          <div className="flex-1 flex flex-col relative overflow-hidden">
+        <div className="flex-1 flex flex-col relative overflow-hidden">
+          {state.isLoaded && (
             <div
               className="absolute top-0 left-0 right-0 z-10 flex items-center gap-3 px-4 h-14"
               style={{
@@ -258,21 +259,54 @@ export default function ReaderPage() {
                 </button>
               </div>
             </div>
+          )}
 
-            <div className="flex-1 relative overflow-hidden">
-              <FoliateView
-                ref={viewRef}
-                onRelocate={onRelocate}
-                onLoad={onLoad}
-                onSelection={onSelection}
-                onAnnotationClick={onAnnotationClick}
-                onBookReady={onBookReady}
-                flow={readMode}
-                fontSize={fontSize}
-                fontFamily={fontFamily}
-              />
-            </div>
+          <div className="flex-1 relative overflow-hidden">
+            <FoliateView
+              ref={viewRef}
+              onRelocate={onRelocate}
+              onLoad={onLoad}
+              onSelection={onSelection}
+              onAnnotationClick={onAnnotationClick}
+              onBookReady={onBookReady}
+              onReady={onViewReady}
+              flow={readMode}
+              fontSize={fontSize}
+              fontFamily={fontFamily}
+            />
 
+            {!state.isLoaded && (
+              <div className="absolute inset-0 flex flex-col overflow-hidden" style={{ background: '#1c1a18' }}>
+                {state.error ? (
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-3 text-center px-8 max-w-sm">
+                      <div className="w-12 h-12 rounded-full bg-red-900/30 flex items-center justify-center">
+                        <AlertCircle size={20} className="text-red-400" />
+                      </div>
+                      <p className="text-sm text-red-300">{state.error}</p>
+                      <button
+                        onClick={handleOpenFilePicker}
+                        className="mt-1 text-xs text-[#c9a96e] hover:underline"
+                      >
+                        Try another file
+                      </button>
+                    </div>
+                  </div>
+                ) : state.isLoading ? (
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <Loader2 size={28} className="text-[#c9a96e] animate-spin" />
+                      <p className="text-xs text-[#6b6762]">Opening book…</p>
+                    </div>
+                  </div>
+                ) : (
+                  <BookshelfPanel onOpenFile={loadBook} />
+                )}
+              </div>
+            )}
+          </div>
+
+          {state.isLoaded && (
             <div
               className="absolute bottom-0 left-0 right-0 z-10 flex items-center gap-3 px-4 h-10"
               style={{
@@ -306,37 +340,9 @@ export default function ReaderPage() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      ) : (
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {state.error ? (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-3 text-center px-8 max-w-sm">
-                <div className="w-12 h-12 rounded-full bg-red-900/30 flex items-center justify-center">
-                  <AlertCircle size={20} className="text-red-400" />
-                </div>
-                <p className="text-sm text-red-300">{state.error}</p>
-                <button
-                  onClick={handleOpenFilePicker}
-                  className="mt-1 text-xs text-[#c9a96e] hover:underline"
-                >
-                  Try another file
-                </button>
-              </div>
-            </div>
-          ) : state.isLoading ? (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 size={28} className="text-[#c9a96e] animate-spin" />
-                <p className="text-xs text-[#6b6762]">Opening book…</p>
-              </div>
-            </div>
-          ) : (
-            <BookshelfPanel onOpenFile={loadBook} />
           )}
         </div>
-      )}
+      </div>
 
       {showAnnotationPopover && pendingSelection && (
         <AnnotationPopover

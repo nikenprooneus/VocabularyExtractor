@@ -64,6 +64,8 @@ export function useEpubReader() {
   const [fontFamily, setFontFamilyState] = useState<string>('System Default');
 
   const viewRef = useRef<FoliateViewHandle | null>(null);
+  const viewReadyRef = useRef(false);
+  const pendingOpenRef = useRef<(() => Promise<void>) | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentBookIdRef = useRef<string | null>(null);
   const currentCfiRef = useRef<string | null>(null);
@@ -141,6 +143,15 @@ export function useEpubReader() {
     },
     []
   );
+
+  const onViewReady = useCallback(async () => {
+    viewReadyRef.current = true;
+    if (pendingOpenRef.current) {
+      const pending = pendingOpenRef.current;
+      pendingOpenRef.current = null;
+      await pending();
+    }
+  }, []);
 
   const syncAnnotationsToView = useCallback(
     (toLoad: Annotation[]) => {
@@ -309,7 +320,8 @@ export function useEpubReader() {
           isLoading: false,
         }));
 
-        if (viewRef.current) {
+        const openBook = async () => {
+          if (!viewRef.current) return;
           await viewRef.current.open(file);
           if (savedCfi) {
             await viewRef.current.init({ lastLocation: savedCfi });
@@ -317,6 +329,12 @@ export function useEpubReader() {
             await viewRef.current.init({ showTextStart: true });
           }
           syncAnnotationsToView(existingAnnotations);
+        };
+
+        if (viewReadyRef.current) {
+          await openBook();
+        } else {
+          pendingOpenRef.current = openBook;
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Failed to open EPUB.';
@@ -424,6 +442,7 @@ export function useEpubReader() {
     onAnnotationClick,
     onBookReady,
     onLoad,
+    onViewReady,
     readMode,
     setReadMode,
     fontSize,
